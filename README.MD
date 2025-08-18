@@ -8,13 +8,13 @@ Multi-purpose utility application for classic Resident Evil video games for Sony
 
 ## Notice
 - This is an extremely early, open-source test version rewrite of "BioClone Redux"
-- Do not expect modification abilities of that old app, yet...
+- Do not expect modification abilities of that app, yet...
 
 ## Basics (Preliminary)
 ##### **Prerendered Backgrounds**
-- Must be PNG with naming convention: ROOMXYYZZ.PNG (example: ROOM20B10.PNG)
+- Must be either TIM or PNG with naming convention: ROOMXYYZZ (example: ROOM20B10.PNG)
 ##### **Camera Sprite Masks**
-- Must be PNG with naming convention: ROOM_XYY_ZZ.PNG (example: ROOM_20B_10_MASK.PNG)
+- Must be either TIM or PNG with naming convention: ROOM_XYY_ZZ (example: ROOM_20B_10_MASK.PNG)
 
 Background and Mask images must be located in same directory as RDT
 
@@ -28,6 +28,10 @@ Background and Mask images must be located in same directory as RDT
 | `F11` | Enter/Exit fullscreen mode |
 | `CTRL+?` | About this application |
 | `ESC` | Exit Application |
+
+## Controller
+- Preliminary support of animation state change ("playing") for Bio2 only
+- Model (PLD) and Weapon (PLW) both must be open
 
 ## Images
 ![Preliminary Test](/images/preliminary_test.jpg?raw=true "Preliminary Test")
