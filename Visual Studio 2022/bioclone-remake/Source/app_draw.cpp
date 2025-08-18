@@ -190,10 +190,10 @@ void Global_Application::DrawCollision(void)
 			switch (Bio2->Rdt->Sca->Get(i)->Id.Bits.Shape)
 			{
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->DrawBox(Vec, {}, Color, b_Solid); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Triangle_A); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Triangle_B); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Triangle_C); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Triangle_D); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_A); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_B); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_C); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_D); break;
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->DrawRhombus(Vec, {}, Color, b_Solid); break;
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle):
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x):
@@ -255,21 +255,30 @@ void Global_Application::DrawFloor(void)
 	}
 }
 
-void Global_Application::Collision(VECTOR2& Position, SIZEVECTOR Hitbox)
+void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox)
 {
+	std::lock_guard<std::mutex> lock(CollisionMutex);
+
+	if (!Geometry->b_CollisionDetection) { return; }
+
 	if (Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
 	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
 	{
 		for (std::size_t i = 0; i < Bio2->Rdt->Sca->Count(); i++)
 		{
+			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Object) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit7) { continue; }
+			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Player) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit8) { continue; }
+			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::SubPlayer) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit8) { continue; }
+			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Enemy) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit3) { continue; }
+
 			switch (Bio2->Rdt->Sca->Get(i)->Id.Bits.Shape)
 			{
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Rectangle); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Triangle_A); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Triangle_B); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Triangle_C); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Triangle_D); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_A); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_B); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_C); break;
+			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_D); break;
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Rhombus); break;
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Circle); break;
 			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::OblongX); break;
@@ -284,6 +293,38 @@ void Global_Application::Collision(VECTOR2& Position, SIZEVECTOR Hitbox)
 				case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Slope_D); break;
 				}
 				break;
+			}
+		}
+	}
+}
+
+void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
+{
+	std::lock_guard<std::mutex> lock(CollisionMutex);
+
+	if (!Geometry->b_SwitchDetection) { return; }
+
+	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	{
+		auto& Data = Bio2->Rdt->Rvd->data();
+
+		bool b_FirstInstance = false;
+
+		for (std::size_t i = 0; i < Data.size(); i++)
+		{
+			if (!Data[i].Be_flg || (Data[i].Fcut != Camera->Cut)) { continue; }
+
+			if (Data[i].Tcut == 0 && !b_FirstInstance) { b_FirstInstance = true; continue; }
+
+			if (Data[i].Fcut == Camera->Cut)
+			{
+				if (Geometry->CameraSwitch(Position, Hitbox, Data[i].Xz))
+				{
+					uint8_t Cut = Data[i].Tcut;
+					Camera->SetImage(Cut);
+					Camera->Set(Bio2->Rdt->Rid->Get(Cut)->ViewR >> 7, Bio2->Rdt->Rid->Get(Cut)->View_p, Bio2->Rdt->Rid->Get(Cut)->View_r);
+					return;
+				}
 			}
 		}
 	}

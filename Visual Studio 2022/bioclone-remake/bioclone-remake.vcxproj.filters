@@ -158,6 +158,9 @@
     <Filter Include="Standard\DX9\Shader">
       <UniqueIdentifier>{b6c9511a-942d-4b32-a532-6cac7f297c54}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Standard\XInput">
+      <UniqueIdentifier>{87fca43d-2751-4e8f-adcc-ddec14d57a92}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\mstd-lib\std_basic_fstream.cpp">
@@ -523,6 +526,18 @@
     <ClCompile Include="Source\app_edit_collision.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\app_roomcut.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\mstd-lib\XInput\std_xinput.cpp">
+      <Filter>Standard\XInput</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_controller.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp">
+      <Filter>BioHazard\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Windows\resource.h">
@@ -872,6 +887,12 @@
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header_nov96.h">
       <Filter>BioHazard\Bio2\RDT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\mstd-lib\XInput\std_xinput.h">
+      <Filter>Standard\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h">
+      <Filter>BioHazard\Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

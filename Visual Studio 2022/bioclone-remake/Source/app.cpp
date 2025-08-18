@@ -19,36 +19,55 @@ void Global_Application::About(void) const
 
 	AboutStr += Str.FormatCStyle("\r\n\r\nConfiguration:\r\n<a href=\"%ws\">%ws</a>", GetConfigFilename().wstring().c_str(), GetConfigFilename().wstring().c_str());
 	AboutStr += Str.FormatCStyle("\r\n<a href=\"%ws\">%ws</a>", GetImGuiConfigFilename().wstring().c_str(), GetImGuiConfigFilename().wstring().c_str());
-	AboutStr += Str.FormatCStyle("\r\n<a href=\"%ws\">%ws</a>", GetToolbarIconFilename().wstring().c_str(), GetToolbarIconFilename().wstring().c_str());
 
 	AboutStr += Str.FormatCStyle("\r\n\r\nimgui: <a href=\"https://github.com/ocornut/imgui\">https://github.com/ocornut/imgui</a>");
 	AboutStr += Str.FormatCStyle("\r\n\r\nlibjpeg-turbo: <a href=\"https://github.com/libjpeg-turbo/libjpeg-turbo\">https://github.com/libjpeg-turbo/libjpeg-turbo</a>");
 	AboutStr += Str.FormatCStyle("\r\n\r\nlibpng: <a href=\"https://github.com/pnggroup/libpng\">https://github.com/pnggroup/libpng</a>");
 	AboutStr += Str.FormatCStyle("\r\n\r\nzlib: <a href=\"https://github.com/madler/zlib\">https://github.com/madler/zlib</a>");
 
-	G->Window->MessageModal(L"About", L"", Str.GetWide(AboutStr));
+	Window->MessageModal(L"About", L"", Str.GetWide(AboutStr));
 }
 
 void Global_Application::Controls(void) const
 {
 	Standard_String Str;
 
-	String ControlsStr = Str.FormatCStyle("CTRL+O -- Open (any file type)");
-	ControlsStr += Str.FormatCStyle("\r\nCTRL+N -- New Sony PlayStation Texture Image (*.TIM)");
-	ControlsStr += Str.FormatCStyle("\r\nCTRL+S -- Save Sony PlayStation Texture Image (*.TIM)");
-	ControlsStr += Str.FormatCStyle("\r\nUP/DOWN -- View previous/next texture (when file count > 1)");
-	ControlsStr += Str.FormatCStyle("\r\nLEFT/RIGHT -- View previous/next color lookup table (palette)");
-	ControlsStr += Str.FormatCStyle("\r\nCTRL+MOUSEWHEEL -- Adjust image zoom");
+	String ControlsStr = Str.FormatCStyle("CTRL+O -- Open RDT");
+	ControlsStr += Str.FormatCStyle("\r\nCTRL+N -- New RDT");
+	ControlsStr += Str.FormatCStyle("\r\nCTRL+S -- Save RDT");
+	ControlsStr += Str.FormatCStyle("\r\nLEFT/RIGHT -- View previous/next camera");
+	ControlsStr += Str.FormatCStyle("\r\nCTRL+LEFT/RIGHT -- View previous/next animation");
+	ControlsStr += Str.FormatCStyle("\r\nCTRL+MOUSEWHEEL -- Adjust render zoom");
 	ControlsStr += Str.FormatCStyle("\r\nF11 -- Enter/Exit fullscreen mode");
 	ControlsStr += Str.FormatCStyle("\r\nCTRL+? -- About this application");
 	ControlsStr += Str.FormatCStyle("\r\nESC -- Exit Application");
 
-	G->Window->MessageModal(L"Controls", L"", Str.GetWide(ControlsStr));
+	Window->MessageModal(L"Controls", L"", Str.GetWide(ControlsStr));
+}
+
+void Global_Application::SetMaxRenderSize(uint32_t MaxWidth, uint32_t MaxHeight)
+{
+	b_SetMaxRenderSize = false;
+
+	if (b_IgnoreAutoResize) { return; }
+
+	m_RequestWidth = min(MaxWidth, (MaxWidth / static_cast<uint32_t>(Camera->m_NativeWidth)) * static_cast<uint32_t>(Camera->m_NativeWidth));
+	m_RequestHeight = min(MaxHeight, (MaxHeight / static_cast<uint32_t>(Camera->m_NativeHeight)) * static_cast<uint32_t>(Camera->m_NativeHeight));
+
+	Camera->SetOrtho(static_cast<float>(m_RequestWidth), static_cast<float>(m_RequestHeight));
+
+	Camera->m_BackgroundVert.reset(Render->CreateVec4t(Camera->GetImageVert()));
+
+	b_RequestRenderResize = true;
 }
 
 void Global_Application::RenderScene(void)
 {
-	if (!m_RenderTexture || !m_RenderSurface) { return; }
+	if (b_RequestRenderResize)
+	{
+		b_RequestRenderResize = false;
+		InitRender(m_RequestWidth, m_RequestHeight);
+	}
 
 	static IDirect3DSurface9* OriginalSurface = nullptr;
 	static IDirect3DSurface9* TextureSurface = nullptr;
@@ -62,6 +81,15 @@ void Global_Application::RenderScene(void)
 	}
 
 	{
+		ControllerInput(Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation());
+
+		CameraSwitch(Player->Position(), Player->Hitbox());
+
+		CollisionPool.Enqueue([this]()
+			{
+				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
+			});
+
 		Render->Device()->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 		Render->Device()->SetRenderState(D3DRS_CLIPPING, FALSE);
 
@@ -83,8 +111,6 @@ void Global_Application::RenderScene(void)
 
 		DrawFloor();
 
-		if (Geometry->b_CollisionDetection) { Collision(Player->Position(), Player->Hitbox()); }
-
 		if (Player->b_DrawHitbox) { Geometry->DrawCylinder(Player->HitboxShape(), Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation(), 0x00C5C5C5, true); }
 
 		Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER);
@@ -103,6 +129,9 @@ void Global_Application::RenderScene(void)
 		Render->Device()->StretchRect(m_RenderSurface.get(), nullptr, TextureSurface, nullptr, D3DTEXF_NONE);
 
 		Render->Device()->SetRenderTarget(0, OriginalSurface);
+
+		OriginalSurface->Release();
+		TextureSurface->Release();
 	}
 }
 
@@ -153,18 +182,24 @@ void Global_Application::Draw(void)
 
 		MainMenu();
 
-		float totalWidth = ImGui::GetIO().DisplaySize.x - 4.0f;
-		float leftPanelWidth = 200.0f;
-		float rightPanelWidth = 420.0f;
-		float centerPanelWidth = max(static_cast<float>(m_RenderWidth), totalWidth - leftPanelWidth - rightPanelWidth);
+		float WindowWidth = ImGui::GetIO().DisplaySize.x - 4.0f;
+		float WindowHeight = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeightWithSpacing() - 2.0f;
+		static constexpr float LeftPanelWidth = 200.0f;
+		static constexpr float RightPanelWidth = 420.0f;
+		float CenterPanelWidth = max(0.0f, WindowWidth - LeftPanelWidth - RightPanelWidth);
 
-		float panelHeight = ImGui::GetIO().DisplaySize.y - ImGui::GetFrameHeightWithSpacing() - 2.0f;
+		if (b_SetMaxRenderSize)
+		{
+			SetMaxRenderSize(static_cast<uint32_t>(CenterPanelWidth), static_cast<uint32_t>(WindowHeight));
+		}
 
-		LeftPanel(ImVec2(2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(leftPanelWidth, panelHeight));
-		CenterPanel(ImVec2(leftPanelWidth + 2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(centerPanelWidth, panelHeight));
-		RightPanel(ImVec2(leftPanelWidth + centerPanelWidth + 2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(rightPanelWidth, panelHeight));
+		LeftPanel(ImVec2(2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(LeftPanelWidth, WindowHeight));
+		CenterPanel(ImVec2(LeftPanelWidth + 2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(CenterPanelWidth, WindowHeight));
+		RightPanel(ImVec2(LeftPanelWidth + CenterPanelWidth + 2.0f, ImGui::GetFrameHeightWithSpacing()), ImVec2(RightPanelWidth, WindowHeight));
 
 		Options();
+
+		Modal();
 
 		ImGui::PopStyleColor();
 
@@ -188,7 +223,7 @@ void Global_Application::Draw(void)
 	}
 }
 
-void Global_Application::Update(void)
+void Global_Application::Input(void)
 {
 	if (!ImGui::GetKeyData(ImGuiKey_Escape)->DownDuration)
 	{
@@ -198,7 +233,7 @@ void Global_Application::Update(void)
 
 	if (!ImGui::GetKeyData(ImGuiKey_F11)->DownDuration)
 	{
-		Window->AutoFullscreen();
+		b_RequestFullscreen = true;
 	}
 
 	if (!ImGui::GetKeyData(ImGuiKey_DownArrow)->DownDuration)
@@ -256,41 +291,6 @@ void Global_Application::Update(void)
 	}
 }
 
-void Global_Application::Shutdown(void)
-{
-	if (b_Shutdown) { return; }
-
-	SaveConfig();
-
-	Player->b_Active = false;
-
-	while (Player->b_Drawing)
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}
-
-	Camera->Shutdown();
-
-	//Player->Close();
-
-	CloseRDT();
-
-	Render->Shutdown();
-
-	b_Shutdown = true;
-
-	ImGui_ImplDX9_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-
-	//ImGui::DestroyContext(Context.get());
-
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-	PostQuitMessage(0);
-
-	DestroyWindow(Window->Get());
-}
-
 void Global_Application::DragAndDrop(StrVecW Files) const
 {
 	/*for (std::size_t i = 0; i < Files.size(); i++)
@@ -312,7 +312,7 @@ void Global_Application::Commandline(StrVecW Args)
 {
 	for (std::size_t i = 0; i < Args.size(); i++)
 	{
-		if (Str.ToUpper(Args[i]) == L"-FILE")
+		if (Standard_String().ToUpper(Args[i]) == L"-FILE")
 		{
 			if ((i + 1 <= Args.size()) && (Standard_FileSystem().Exists(Args[i + 1])))
 			{
@@ -329,168 +329,160 @@ void Global_Application::Commandline(StrVecW Args)
 	}
 }
 
-int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
+void Global_Application::InitWin32(HINSTANCE hInstance)
+{
+	extern LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
+	extern LRESULT CALLBACK RenderProc(HWND, UINT, WPARAM, LPARAM);
+
+	int DefaultWidth = 1920;
+	int DefaultHeight = 1080;
+
+	if (b_BootMaximized)
+	{
+		m_BootWidth = DefaultWidth;
+		m_BootHeight = DefaultHeight;
+	}
+
+	if (b_BootFullscreen)
+	{
+		b_BootMaximized = false;
+		m_BootWidth = DefaultWidth;
+		m_BootHeight = DefaultHeight;
+	}
+
+	if ((!m_BootWidth) || (m_BootWidth < DefaultWidth) || (!m_BootHeight) || (m_BootHeight < DefaultHeight))
+	{
+		m_BootWidth = DefaultWidth;
+		m_BootHeight = DefaultHeight;
+	}
+
+	Window->PresetStyle(WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+	Window->PresetStyleEx(WS_EX_ACCEPTFILES | WS_EX_APPWINDOW);
+	Window->SetCaptionName(VER_PRODUCT_NAME_STR);
+	Window->PresetClassName(VER_INTERNAL_NAME_STR);
+	Window->SetIcon(hInstance, IDI_WINDOW);
+	Window->SetIconSmall(hInstance, IDI_WINDOW);
+	Window->Create(m_BootWidth, m_BootHeight, hInstance, SW_HIDE, WindowProc);
+
+	Render->Initialize(Window->CreateChild(0, 0, m_BootWidth, m_BootHeight, hInstance, SW_SHOW, RenderProc, NULL, NULL), m_BootWidth, m_BootHeight, false);
+
+	Window->SetTimer(60);
+
+	while (!Render->NormalState()) { Window->SleepTimer(); }
+
+	if (b_BootMaximized)
+	{
+		ShowWindow(Window->Get(), SW_SHOWMAXIMIZED);
+
+		RECT Rect = Window->GetRect();
+		WINDOWPOS WindowPos{};
+		WindowPos.hwnd = Window->Get();
+		WindowPos.hwndInsertAfter = nullptr;
+		WindowPos.x = Rect.left;
+		WindowPos.y = Rect.top;
+		WindowPos.cx = (Rect.right - Rect.left);
+		WindowPos.cy = (Rect.bottom - Rect.top);
+		WindowPos.flags = SWP_NOZORDER | SWP_NOREDRAW | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOOWNERZORDER | SWP_DEFERERASE | SWP_ASYNCWINDOWPOS;
+		SendMessage(Render->Window()->Get(), WM_WINDOWPOSCHANGED, 0, (LPARAM)&WindowPos);
+	}
+
+	else if (b_BootFullscreen)
+	{
+		Window->AutoFullscreen();
+	}
+
+	else { ShowWindow(Window->Get(), SW_SHOWDEFAULT); }
+}
+
+void Global_Application::InitImGuiColor(void)
+{
+	m_BorderColor.r = static_cast<float>(GetRValue(Window->GetBorderColor())) / 255.0f;
+	m_BorderColor.g = static_cast<float>(GetGValue(Window->GetBorderColor())) / 255.0f;
+	m_BorderColor.b = static_cast<float>(GetBValue(Window->GetBorderColor())) / 255.0f;
+
+	m_CaptionColor.r = static_cast<float>(GetRValue(Window->GetCaptionColor())) / 255.0f;
+	m_CaptionColor.g = static_cast<float>(GetGValue(Window->GetCaptionColor())) / 255.0f;
+	m_CaptionColor.b = static_cast<float>(GetBValue(Window->GetCaptionColor())) / 255.0f;
+
+	m_WindowColor.r = static_cast<float>(GetRValue(Window->GetColor())) / 255.0f;
+	m_WindowColor.g = static_cast<float>(GetGValue(Window->GetColor())) / 255.0f;
+	m_WindowColor.b = static_cast<float>(GetBValue(Window->GetColor())) / 255.0f;
+
+	m_FontColor.r = static_cast<float>(GetRValue(Window->GetTextColor())) / 255.0f;
+	m_FontColor.g = static_cast<float>(GetGValue(Window->GetTextColor())) / 255.0f;
+	m_FontColor.b = static_cast<float>(GetBValue(Window->GetTextColor())) / 255.0f;
+
+	ImGui::GetStyle().Colors[ImGuiCol_Text] = ImVec4(m_FontColor.r, m_FontColor.g, m_FontColor.b, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_TextDisabled] = ImVec4(m_FontColor.r * 0.6f, m_FontColor.g * 0.6f, m_FontColor.b * 0.6f, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_PopupBg] = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+
+	ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_TitleBg] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_Header] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_HeaderActive] = ImVec4(m_BorderColor.r * 2.0f, m_BorderColor.g * 2.0f, m_BorderColor.b * 2.0f, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_Button] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = ImVec4(m_BorderColor.r * 2.0f, m_BorderColor.g * 2.0f, m_BorderColor.b * 2.0f, 1.0f);
+
+	ImGui::GetStyle().Colors[ImGuiCol_Tab] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_TabHovered] = ImVec4(m_BorderColor.r * 2.0f, m_BorderColor.g * 2.0f, m_BorderColor.b * 2.0f, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_TabSelected] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_TabSelectedOverline] = ImVec4(1, 0, 0, 0);
+
+	ImGui::GetStyle().Colors[ImGuiCol_FrameBg] = ImVec4(m_CaptionColor.r, m_CaptionColor.g, m_CaptionColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1.0f);
+	ImGui::GetStyle().Colors[ImGuiCol_FrameBgActive] = ImVec4(m_BorderColor.r * 2.0f, m_BorderColor.g * 2.0f, m_BorderColor.b * 2.0f, 1.0f);
+}
+
+void Global_Application::InitImGui(void)
+{
+	m_ConfigStr = GetImGuiConfigFilename().string();
+
+	IMGUI_CHECKVERSION();
+
+	Context.reset(ImGui::CreateContext());
+
+	InitImGuiColor();
+
+	ImGui::GetIO().IniFilename = m_ConfigStr.c_str();
+	ImGui::GetIO().Fonts->Clear();
+	ImGui::GetIO().Fonts->AddFontFromFileTTF(Window->GetFont().string().c_str(), Window->FontSize());
+	ImGui::GetIO().FontDefault = ImGui::GetIO().Fonts->Fonts.back();
+
+	ImGui_ImplWin32_Init(Render->Window()->Get());
+	ImGui_ImplDX9_Init(Render->Device());
+}
+
+void Global_Application::InitRender(uint32_t Width, uint32_t Height)
+{
+	m_RequestWidth = m_RenderWidth = Width;
+	m_RequestHeight = m_RenderHeight = Height;
+
+	m_RenderTexture.reset(Render->CreateTexture(static_cast<std::uint16_t>(m_RenderWidth), static_cast<std::uint16_t>(m_RenderHeight), D3DUSAGE_RENDERTARGET));
+	m_RenderTexture->GetLevelDesc(0, &m_RenderDesc);
+
+	m_RenderSurface.reset(Render->CreateRenderSurface(m_RenderWidth, m_RenderHeight, D3DFMT_A8R8G8B8));
+
+	Render->CreateAxisGrid();
+}
+
+void Global_Application::InitGame(void)
 {
 	{
-		if (Standard_FileSystem().Exists(GetConfigFilename()))
-		{
-			OpenConfig();
-		}
-		else
-		{
-			SaveConfig();
-
-			std::filesystem::path Source = Str.FormatCStyle(L"%ws\\%ws", Window->GetCurrentWorkingDir().wstring().c_str(), L"icons.png");
-
-			if (Standard_FileSystem().Exists(Source) && !Standard_FileSystem().Exists(GetToolbarIconFilename()))
-			{
-				std::filesystem::copy_file(Source, GetToolbarIconFilename(), std::filesystem::copy_options::overwrite_existing);
-				std::filesystem::remove(Source);
-			}
-		}
-	}
-	{
-		Commandline(Window->GetCommandline(lpCmdLine));
-	}
-	{
-		m_ConfigStr = GetImGuiConfigFilename().string();
-
-		IMGUI_CHECKVERSION();
-		Context.reset(ImGui::CreateContext());
-		ImGui::StyleColorsDark();
-
-		{
-			float CaptionRed = float(GetRValue(Window->GetCaptionColor())) / 255;
-			float CaptionGreen = float(GetGValue(Window->GetCaptionColor())) / 255;
-			float CaptionBlue = float(GetBValue(Window->GetCaptionColor())) / 255;
-
-			m_BorderRed = float(GetRValue(Window->GetBorderColor())) / 255;
-			m_BorderGreen = float(GetGValue(Window->GetBorderColor())) / 255;
-			m_BorderBlue = float(GetBValue(Window->GetBorderColor())) / 255;
-
-			ImGui::GetStyle().WindowBorderSize = 0.0f;
-
-			ImGui::GetStyle().Colors[ImGuiCol_PopupBg] = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
-
-			ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-
-			ImGui::GetStyle().Colors[ImGuiCol_TitleBg] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-
-			ImGui::GetStyle().Colors[ImGuiCol_Header] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_HeaderActive] = ImVec4(m_BorderRed * 2, m_BorderGreen * 2, m_BorderBlue * 2, 1.0f);
-
-			ImGui::GetStyle().Colors[ImGuiCol_Button] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_ButtonActive] = ImVec4(m_BorderRed * 2, m_BorderGreen * 2, m_BorderBlue * 2, 1.0f);
-
-			ImGui::GetStyle().Colors[ImGuiCol_Tab] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_TabHovered] = ImVec4(m_BorderRed * 2, m_BorderGreen * 2, m_BorderBlue * 2, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_TabSelected] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_TabSelectedOverline] = ImVec4(1, 0, 0, 0);
-
-			ImGui::GetStyle().Colors[ImGuiCol_FrameBg] = ImVec4(CaptionRed, CaptionGreen, CaptionBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1.0f);
-			ImGui::GetStyle().Colors[ImGuiCol_FrameBgActive] = ImVec4(m_BorderRed * 2, m_BorderGreen * 2, m_BorderBlue * 2, 1.0f);
-		}
-
-		ImGuiIO& io = ImGui::GetIO();
-		io.IniFilename = m_ConfigStr.c_str();
-		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		io.Fonts->Clear();
-		io.Fonts->AddFontFromFileTTF(Window->GetFont().string().c_str(), Window->FontSize());
-		io.FontDefault = io.Fonts->Fonts.back();
-	}
-	{
-		extern LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
-		extern LRESULT CALLBACK RenderProc(HWND, UINT, WPARAM, LPARAM);
-
-		int DefaultWidth = 1920;
-		int DefaultHeight = 1080;
-
-		if (b_BootMaximized)
-		{
-			m_BootWidth = DefaultWidth;
-			m_BootHeight = DefaultHeight;
-		}
-
-		if (b_BootFullscreen)
-		{
-			b_BootMaximized = false;
-			m_BootWidth = DefaultWidth;
-			m_BootHeight = DefaultHeight;
-		}
-
-		int Width = m_BootWidth;
-		int Height = m_BootHeight;
-
-		if ((!m_BootWidth) || (m_BootWidth < DefaultWidth) || (!m_BootHeight) || (m_BootHeight < DefaultHeight))
-		{
-			Width = DefaultWidth;
-			Height = DefaultHeight;
-		}
-
-		Window->PresetStyle(WS_OVERLAPPEDWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-		Window->PresetStyleEx(WS_EX_ACCEPTFILES | WS_EX_APPWINDOW);
-		Window->SetCaptionName(VER_PRODUCT_NAME_STR);
-		Window->PresetClassName(VER_INTERNAL_NAME_STR);
-		Window->SetIcon(hInstance, IDI_WINDOW);
-		Window->SetIconSmall(hInstance, IDI_WINDOW);
-		Window->Create(Width, Height, hInstance, SW_HIDE, WindowProc);
-
-		Render->Initialize(Window->CreateChild(0, 0, Width, Height, hInstance, SW_SHOW, RenderProc, NULL, NULL), Width, Height, false);
-
-		Window->SetTimer(60);
-
-		while (!Render->NormalState()) { Window->SleepTimer(); }
-
-		ShowWindow(Window->Get(), SW_SHOWDEFAULT);
-
-		if (b_BootMaximized)
-		{
-			ShowWindow(Window->Get(), SW_SHOWMAXIMIZED);
-
-			RECT Rect = G->Window->GetRect();
-			WINDOWPOS WindowPos{};
-			WindowPos.hwnd = G->Window->Get();
-			WindowPos.hwndInsertAfter = nullptr;
-			WindowPos.x = Rect.left;
-			WindowPos.y = Rect.top;
-			WindowPos.cx = (Rect.right - Rect.left);
-			WindowPos.cy = (Rect.bottom - Rect.top);
-			WindowPos.flags = SWP_NOZORDER | SWP_NOREDRAW | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOOWNERZORDER | SWP_DEFERERASE | SWP_ASYNCWINDOWPOS;
-			SendMessage(G->Render->Window()->Get(), WM_WINDOWPOSCHANGED, 0, (LPARAM)&WindowPos);
-		}
-
-		if (b_BootFullscreen)
-		{
-			Window->AutoFullscreen();
-		}
-
-		Str.hWnd = Window->Get();
-	}
-	{
-		ImGui_ImplWin32_Init(Render->Window()->Get());
-		ImGui_ImplDX9_Init(Render->Device());
-	}
-
-	{
-		m_RenderTexture.reset(Render->CreateTexture((std::uint16_t)(m_RenderWidth = 1280), (std::uint16_t)(m_RenderHeight = 960), D3DUSAGE_RENDERTARGET));
-		m_RenderTexture->GetLevelDesc(0, &m_RenderDesc);
-
-		m_RenderSurface.reset(Render->CreateRenderSurface(m_RenderWidth, m_RenderHeight, D3DFMT_A8R8G8B8));
-
-		Render->CreateAxisGrid();
-	}
-
-	{
 		Geometry->Init();
-
+	}
+	{
 		Camera->Str.hWnd = Window->Get();
 
-		Camera->SetOrtho((float)m_RenderWidth, (float)m_RenderHeight);
+		Camera->SetOrtho(static_cast<float>(m_RenderWidth), static_cast<float>(m_RenderHeight));
 
 		Camera->m_BackgroundVert.reset(Render->CreateVec4t(Camera->GetImageVert()));
 
@@ -498,27 +490,90 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 	}
 
 	{
-		Player->GTE = G->GTE;
+		Player->GTE = GTE;
 
-		Player->Render = G->Render;
+		Player->Render = Render;
+
+		Player->b_HorzFlip = Camera->b_HorzFlip;
+
+		Player->b_VertFlip = Camera->b_VertFlip;
 
 		Player->SetWindow(Window->Get());
-
-		Player->SetGame(Game);
 
 		Player->Hitbox().w = 450;
 		Player->Hitbox().h = -1530;
 		Player->Hitbox().d = 450;
 	}
+}
 
-	Standard_Thread_Pool ThreadPool;
-	ThreadPool.ThreadPoolInit(1);
+void Global_Application::Shutdown(void)
+{
+	if (b_Shutdown) { return; }
 
-	MSG msg{};
-	msg.message = NULL;
-	msg.hwnd = Window->Get();
+	SaveConfig();
 
-	static bool b_Active = true;
+	b_Shutdown = true;
+
+	Modal = []() {};
+
+	if (b_ControllerMapping || b_RoomcutExtraction)
+	{
+		b_ControllerMapping.store(false);
+		b_RoomcutExtraction.store(false);
+
+		auto StartTime = std::chrono::steady_clock::now();
+
+		while (true)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+			if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(2))
+			{
+				break;
+			}
+		}
+	}
+
+	auto StartTime = std::chrono::steady_clock::now();
+
+	while (!ThreadPool.Stop() && !CollisionPool.Stop())
+	{
+		if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(5)) { break; }
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	Render->b_ViewGrid = false;
+
+	Render->b_ViewAxis = false;
+
+	Player->Shutdown();
+
+	Geometry->Shutdown();
+
+	Camera->Shutdown();
+
+	CloseRDT();
+
+	ImGui_ImplDX9_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+
+	Render->Shutdown();
+
+	DestroyWindow(Window->Get());
+}
+
+int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
+{
+	InitConfig();
+	Commandline(Window->GetCommandline(lpCmdLine));
+	InitWin32(hInstance);
+	InitImGui();
+	InitRender(m_RenderWidth, m_RenderHeight);
+	InitGame();
+
+	MSG msg{ Window->Get(), 0U, 0U, 0, 0U, { 0, 0 } };
+
+	Window->ChronoTimerInit(60.0);
 	
 	while (b_Active)
 	{
@@ -526,32 +581,30 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 		{
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
-
-			if ((msg.message == WM_QUIT) || (msg.message == WM_DESTROY))
-			{
-				b_Active = false;
-			}
 		}
 
-		ThreadPool.ThreadPoolEnqueue([this]()
+		if (b_RequestFullscreen)
+		{
+			b_RequestFullscreen = false;
+			Window->AutoFullscreen();
+		}
+
+		Window->ChronoTimerUpdate();
+
+		ThreadPool.Enqueue([this]()
 			{
-				if (Window->IsMinimized() || !Render->NormalState() || !Context) { return; }
+				if (!b_Active || Window->IsMinimized() || !Render->NormalState() || !Context) { return; }
 
 				if (!Window->GetDroppedFiles().empty()) { DragAndDrop(Window->GetDroppedFiles()); Window->GetDroppedFiles().clear(); }
 
-				Update();
+				Input();
 
 				RenderScene();
 
 				Draw();
 			});
 
-		if (b_ForceShutdown || Render->b_ForceShutdown)
-		{
-			b_Active = false;
-		}
-
-		Window->SleepTimer();
+		Window->ChronoTimerSleep();
 	}
 
 	Shutdown();

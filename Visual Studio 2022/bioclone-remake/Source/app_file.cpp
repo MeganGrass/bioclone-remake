@@ -20,6 +20,8 @@ bool Global_Application::IsRoomOpen(void)
 
 void Global_Application::CloseRDT(void)
 {
+	if (!IsRoomOpen()) { return; }
+
 	switch (Game)
 	{
 	case Video_Game::Resident_Evil_2_Nov_6_1996:
@@ -160,11 +162,11 @@ void Global_Application::SavePlayerTexture(void)
 		std::filesystem::path Dir = Filename.value().parent_path();
 		std::filesystem::path Stem = Filename.value().stem();
 
-		if (Str.ToUpper(Extension) == ".TIM")
+		if (Standard_String().ToUpper(Extension) == ".TIM")
 		{
 			Player->Texture()->SaveTIM(Filename.value());
 		}
-		if (Str.ToUpper(Extension) == ".BMP")
+		if (Standard_String().ToUpper(Extension) == ".BMP")
 		{
 			if (Player->Texture()->GetPaletteCount())
 			{
@@ -177,7 +179,7 @@ void Global_Application::SavePlayerTexture(void)
 			else { Player->Texture()->SaveBMP(Filename.value()); }
 		}
 #ifdef LIB_PNG
-		if (Str.ToUpper(Extension) == ".PNG")
+		if (Standard_String().ToUpper(Extension) == ".PNG")
 		{
 			if (Player->Texture()->GetPaletteCount())
 			{
@@ -191,7 +193,7 @@ void Global_Application::SavePlayerTexture(void)
 		}
 #endif
 #ifdef LIB_JPEG
-		if ((Str.ToUpper(Extension) == ".JPG" || Str.ToUpper(Extension) == ".JPEG"))
+		if ((Standard_String().ToUpper(Extension) == ".JPG" || Standard_String().ToUpper(Extension) == ".JPEG"))
 		{
 			if (Player->Texture()->GetPaletteCount())
 			{
@@ -222,8 +224,8 @@ void Global_Application::Screenshot(void)
 
 		String Extension = Filename.value().extension().string();
 
-		if (Str.ToUpper(Extension) == ".PNG") { FileFormat = D3DXIFF_PNG; }
-		if (Str.ToUpper(Extension) == ".JPG" || Str.ToUpper(Extension) == ".JPEG") { FileFormat = D3DXIFF_JPG; }
+		if (Standard_String().ToUpper(Extension) == ".PNG") { FileFormat = D3DXIFF_PNG; }
+		if (Standard_String().ToUpper(Extension) == ".JPG" || Standard_String().ToUpper(Extension) == ".JPEG") { FileFormat = D3DXIFF_JPG; }
 
 		Render->SaveTexture(m_RenderTexture.get(), FileFormat, true, Filename.value());
 	}

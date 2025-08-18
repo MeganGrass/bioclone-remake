@@ -17,11 +17,17 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 {
 	if (message == WM_CLOSE || message == WM_DESTROY)
 	{
-		G->Shutdown();
+		G->b_Active = false;
+		return true;
 	}
 
 	if (G->Render && G->Render->NormalState())
 	{
+		if ((message == WM_SIZE && wParam == SIZE_MAXIMIZED) || (message == WM_SIZE && wParam == SIZE_RESTORED))
+		{
+			G->b_SetMaxRenderSize = true;
+		}
+
 		if (message == WM_WINDOWPOSCHANGED)
 		{
 			RECT Rect = G->Window->GetRect();

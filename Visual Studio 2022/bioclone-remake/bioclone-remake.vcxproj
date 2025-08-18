@@ -61,6 +61,7 @@
     <ClCompile Include="..\..\bio-lib\CDX\lzo.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_camera.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_common.cpp" />
+    <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_geometry.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_animation.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_model.cpp" />
@@ -87,6 +88,7 @@
     <ClCompile Include="..\..\mstd-lib\Windows\std_window.cpp" />
     <ClCompile Include="..\..\mstd-lib\Windows\std_window_message.cpp" />
     <ClCompile Include="..\..\mstd-lib\Windows\std_window_settings.cpp" />
+    <ClCompile Include="..\..\mstd-lib\XInput\std_xinput.cpp" />
     <ClCompile Include="..\..\sdk\imgui\backends\imgui_impl_dx9.cpp" />
     <ClCompile Include="..\..\sdk\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="..\..\sdk\imgui\imgui.cpp" />
@@ -141,11 +143,13 @@
     <ClCompile Include="..\..\sony-lib\sony_texture_2_str.cpp" />
     <ClCompile Include="Source\app.cpp" />
     <ClCompile Include="Source\app_config.cpp" />
+    <ClCompile Include="Source\app_controller.cpp" />
     <ClCompile Include="Source\app_draw.cpp" />
     <ClCompile Include="Source\app_edit_collision.cpp" />
     <ClCompile Include="Source\app_edit_model.cpp" />
     <ClCompile Include="Source\app_file.cpp" />
     <ClCompile Include="Source\app_imgui.cpp" />
+    <ClCompile Include="Source\app_roomcut.cpp" />
     <ClCompile Include="Source\app_settings.cpp" />
     <ClCompile Include="Source\main.cpp" />
   </ItemGroup>
@@ -191,6 +195,7 @@
     <ClInclude Include="..\..\bio-lib\CDX\lzo.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_camera.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_common.h" />
+    <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_geometry.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_model.h" />
@@ -221,6 +226,7 @@
     <ClInclude Include="..\..\mstd-lib\Windows\std_common.h" />
     <ClInclude Include="..\..\mstd-lib\Windows\std_device.h" />
     <ClInclude Include="..\..\mstd-lib\Windows\std_window.h" />
+    <ClInclude Include="..\..\mstd-lib\XInput\std_xinput.h" />
     <ClInclude Include="..\..\sdk\imgui\backends\imgui_impl_dx9.h" />
     <ClInclude Include="..\..\sdk\imgui\backends\imgui_impl_win32.h" />
     <ClInclude Include="..\..\sdk\imgui\imconfig.h" />
@@ -413,11 +419,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_XINPUT;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -452,11 +458,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_XINPUT;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -483,11 +489,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_DX9;LIB_PNG;LIB_JPEG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_XINPUT;MSTD_DX9;LIB_PNG;LIB_JPEG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -518,11 +524,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;MSTD_DEVICE;MSTD_XINPUT;MSTD_DX9;LIB_JPEG;LIB_PNG;IMGUI_IMPL_WIN32_DISABLE_GAMEPAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>

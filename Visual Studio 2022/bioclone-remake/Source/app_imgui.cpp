@@ -33,6 +33,18 @@ void Global_Application::MainMenu(void)
 				CloseRDT();
 			}
 			ImGui::Separator();
+			if (ImGui::MenuItem("Roomcut##FileMenu", NULL))
+			{
+				if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+
+				if (auto Filename = Window->GetOpenFilename({ L"roomcut.bin" }, { L"roomcut.bin" }); Filename.has_value())
+				{
+					RoomcutExtract(Filename.value());
+				}
+
+				CoUninitialize();
+			}
+			ImGui::Separator();
 			if (ImGui::MenuItem("Screenshot##FileMenu", NULL))
 			{
 				Screenshot();
@@ -40,14 +52,19 @@ void Global_Application::MainMenu(void)
 			ImGui::Separator();
 			if (ImGui::MenuItem("Exit##FileMenu", "ESC"))
 			{
-				b_ForceShutdown = true;
+				b_Active = false;
 			}
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("View##MenuWindow"))
 		{
-			if (ImGui::MenuItem("Fullscreen##ViewMenu", "F11")) { Window->AutoFullscreen(); }
+			if (ImGui::MenuItem("Fullscreen##ViewMenu", "F11")) { b_RequestFullscreen = true; }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Controller Map##ViewMenu", NULL))
+			{
+				Modal = [&]() { ControllerMapping(); };
+			}
 			ImGui::Separator();
 			ImGui::MenuItem("Window Options##ViewMenu", NULL, &b_ViewWindowOptions);
 			ImGui::EndMenu();
@@ -79,86 +96,141 @@ void Global_Application::Options(void)
 
 	ImGui::Begin("Window Options##OptionsWindow", &b_ViewWindowOptions, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
 
-	if (ImGui::BeginCombo("Font##OptionsWindow", Window->FontStems()[Window->FontIndex()].c_str(), ImGuiComboFlags_HeightLarge))
 	{
-		for (std::size_t i = 0; i < Window->FontStems().size(); i++)
+		if (ImGui::BeginCombo("Font##OptionsWindow", Window->FontStems()[Window->FontIndex()].c_str(), ImGuiComboFlags_HeightLarge))
 		{
-			bool b_IsSelected = (Window->FontIndex() == i);
-
-			if (ImGui::Selectable(Window->FontStems()[i].c_str(), b_IsSelected))
+			for (std::size_t i = 0; i < Window->FontStems().size(); i++)
 			{
-				Window->SetFont(Window->FontList()[Window->FontIndex() = i], Window->FontSize());
-				b_RequestFontChange = true;
-			}
+				bool b_IsSelected = (Window->FontIndex() == i);
 
-			if (b_IsSelected)
-			{
-				ImGui::SetItemDefaultFocus();
+				if (ImGui::Selectable(Window->FontStems()[i].c_str(), b_IsSelected))
+				{
+					Window->SetFont(Window->FontList()[Window->FontIndex() = i], Window->FontSize());
+					b_RequestFontChange = true;
+				}
+
+				if (b_IsSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
 			}
+			ImGui::EndCombo();
 		}
-		ImGui::EndCombo();
-	}
 
-	ScrollComboOnHover("Font##OptionsWindow", &Window->FontIndex(), ImGuiDataType_U64, 1, 0, Window->FontStems().size(),
-		[&]() {
+		ScrollComboOnHover("Font##OptionsWindow", &Window->FontIndex(), ImGuiDataType_U64, 1, 0, Window->FontStems().size(),
+			[&]() {
+				Window->SetFont(Window->FontList()[Window->FontIndex()], Window->FontSize());
+				b_RequestFontChange = true;
+			});
+
+		if (ImGui::SliderScalar("Font Size##OptionsWindow", ImGuiDataType_Float, &Window->FontSize(), &Window->FontSizeMin(), &Window->FontSizeMax()))
+		{
+			Window->FontSize() = std::roundf(Window->FontSize());
 			Window->SetFont(Window->FontList()[Window->FontIndex()], Window->FontSize());
 			b_RequestFontChange = true;
-		});
+		}
+
+		ScrollFloatOnHover(&Window->FontSize(), ImGuiDataType_Float, 1.0, Window->FontSizeMin(), Window->FontSizeMax(),
+			[&]() {
+				Window->SetFont(Window->FontList()[Window->FontIndex()], Window->FontSize());
+				b_RequestFontChange = true;
+			});
+	}
+
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 	{
-		float OldFontSize = Window->FontSize();
-
-		if (ImGui::ArrowButton("FontSizeSub##OptionsWindow", ImGuiDir_Left))
+		if (ImGui::BeginTable("Color##OptionsWindow", 4))
 		{
-			--Window->FontSize();
-		}
-		TooltipOnHover("Decrease the font size");
+			ImGui::TableNextColumn();
+			{
+				if (ImGui::ColorEdit3("Border Color##OptionsWindow", (float*)&m_BorderColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions))
+				{
+					Window->SetBorderColor(RGB(m_BorderColor.r * 255.0f, m_BorderColor.g * 255.0f, m_BorderColor.b * 255.0f));
+					InitImGuiColor();
+				}
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2.0f);
+				ImGui::Text("Border");
+			}
 
-		ImGui::SameLine();
+			//DrawVerticalLine(8.0f, 0.5f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
-		if (ImGui::ArrowButton("FontSizeAdd##OptionsWindow", ImGuiDir_Right))
-		{
-			++Window->FontSize();
-		}
-		TooltipOnHover("Increase the font size");
+			ImGui::TableNextColumn();
+			{
+				if (ImGui::ColorEdit3("Caption Color##OptionsWindow", (float*)&m_CaptionColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions))
+				{
+					Window->SetCaptionColor(RGB(m_CaptionColor.r * 255.0f, m_CaptionColor.g * 255.0f, m_CaptionColor.b * 255.0f));
+					InitImGuiColor();
+				}
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2.0f);
+				ImGui::Text("Caption");
+			}
 
-		ImGui::SameLine();
-		ImGui::Text("Font Size: %.1f", OldFontSize);
+			//DrawVerticalLine(8.0f, 0.5f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
-		Window->FontSize() = std::clamp(Window->FontSize(), Window->FontSizeMin(), Window->FontSizeMax());
+			ImGui::TableNextColumn();
+			{
+				if (ImGui::ColorEdit3("Window Color##OptionsWindow", (float*)&m_WindowColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions))
+				{
+					Window->SetColor(BYTE(m_WindowColor.r * 255.0f), BYTE(m_WindowColor.g * 255.0f), BYTE(m_WindowColor.b * 255.0f), true);
+					InitImGuiColor();
+				}
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2.0f);
+				ImGui::Text("Window");
+			}
 
-		if (OldFontSize != Window->FontSize())
-		{
-			b_RequestFontChange = true;
+			//DrawVerticalLine(8.0f, 0.5f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+			ImGui::TableNextColumn();
+			{
+				if (ImGui::ColorEdit3("Font Color##OptionsWindow", (float*)&m_FontColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions))
+				{
+					Window->SetTextColor(RGB(m_FontColor.r * 255.0f, m_FontColor.g * 255.0f, m_FontColor.b * 255.0f));
+					InitImGuiColor();
+				}
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2.0f);
+				ImGui::Text("Font");
+			}
+
+			ImGui::EndTable();
 		}
 	}
 
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
 	{
-		auto OldRed = GetRValue(Window->GetColor());
-		auto OldGreen = GetGValue(Window->GetColor());
-		auto OldBlue = GetBValue(Window->GetColor());
-
-		ImVec4 ColorF = ImVec4(
-			GetRValue(Window->GetColor()) / 255.0f,
-			GetGValue(Window->GetColor()) / 255.0f,
-			GetBValue(Window->GetColor()) / 255.0f,
-			GetAValue(Window->GetColor()) / 255.0f);
-
-		ImGui::ColorEdit3(Str.FormatCStyle("Options##WindowColor").c_str(), (float*)&ColorF, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoOptions);
-		ImGui::SameLine(); ImGui::Text("Window Color");
-
-		COLORREF Color = RGB(
-			BYTE(ColorF.x * 255.0f),
-			BYTE(ColorF.y * 255.0f),
-			BYTE(ColorF.z * 255.0f));
-
-		auto Red = GetRValue(Color);
-		auto Green = GetGValue(Color);
-		auto Blue = GetBValue(Color);
-
-		if ((Red != OldRed) || (Green != OldGreen) || (Blue != OldBlue))
+		if (ImGui::BeginTable("Render##OptionsWindow", 3))
 		{
-			Window->SetColor(GetRValue(Color), GetGValue(Color), GetBValue(Color), true);
+			ImGui::TableNextColumn(); ImGui::Text(" Width");
+
+			ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+			ImGui::InputScalar("##RenderSceneWidth", ImGuiDataType_U32, &m_RequestWidth);
+			TooltipOnHover("Render Scene Width");
+
+			//DrawVerticalLine(8.0f, 0.5f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+			ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+			ImGui::Checkbox(" Ignore Resize##RenderSceneHeight", &b_IgnoreAutoResize);
+			TooltipOnHover("Do not resize render window on fullscreen/maximize/restore");
+
+			ImGui::TableNextColumn(); ImGui::Text(" Height");
+
+			ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+			ImGui::InputScalar("##RenderSceneHeight", ImGuiDataType_U32, &m_RequestHeight);
+			TooltipOnHover("Render Scene Height");
+
+			if ((m_RequestWidth != m_RenderWidth) || (m_RequestHeight != m_RenderHeight))
+			{
+				m_RenderWidth = std::clamp(m_RenderWidth, 1u, 65535u);
+				m_RenderHeight = std::clamp(m_RenderHeight, 1u, 65535u);
+				b_RequestRenderResize = true;
+			}
+
+			ImGui::EndTable();
 		}
 	}
 
@@ -169,8 +241,6 @@ void Global_Application::Options(void)
 
 void Global_Application::RenderWindow(void)
 {
-	if (!m_RenderTexture) { return; }
-
 	ImGui::GetStyle().WindowBorderSize = 0.0f;
 	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(0, 0, 0, 0);
 
@@ -271,7 +341,7 @@ void Global_Application::RenderWindow(void)
 void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 {
 	ImGui::GetStyle().WindowBorderSize = 2.0f;
-	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1);
+	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1);
 
 	ImGui::SetNextWindowPos(Position);
 	ImGui::SetNextWindowSize(Size);
@@ -283,7 +353,7 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 	ImGui::Text(" Disk: %d", Disk);
 	ImGui::Text(" Cut: %d / %d", Camera->Cut, Camera->CutMax ? Camera->CutMax - 1 : 0);
 
-	DrawVerticalLine(8.0f, 12.0f, 2.0f, m_BorderRed, m_BorderGreen, m_BorderBlue);
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 	ImGui::BeginDisabled(Player->Filename().empty());
 	ImGui::Text(" %ws", Player->Filename().empty() ? L"N/A" : Player->Filename().stem().wstring().c_str());
@@ -294,10 +364,10 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 	ImGui::EndDisabled();
 
 	ImGui::BeginDisabled(!Player->Animation(Player->AnimIndex())->IsOpen());
-	ImGui::Text(" Anim: %d / %d", Player->iClip, Player->Animation(Player->AnimIndex())->IsOpen() ? Player->Animation(Player->AnimIndex())->GetClipCount() - 1 : 0);
+	ImGui::Text(" Anim: %d / %d", Player->iClip.load(), Player->Animation(Player->AnimIndex())->IsOpen() ? Player->Animation(Player->AnimIndex())->GetClipCount() - 1 : 0);
 	ImGui::EndDisabled();
 
-	DrawVerticalLine(8.0f, 12.0f, 2.0f, m_BorderRed, m_BorderGreen, m_BorderBlue);
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 	ImGui::BeginDisabled(Camera->b_ViewModelEdit);
 	{
@@ -312,11 +382,15 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 	}
 	ImGui::EndDisabled();
 
-	DrawVerticalLine(8.0f, 12.0f, 2.0f, m_BorderRed, m_BorderGreen, m_BorderBlue);
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 	ImGui::MenuItem(" Grid##LeftPanel", NULL, &Render->b_ViewGrid); TooltipOnHover("Grid");
 
 	ImGui::MenuItem(" Axis##LeftPanel", NULL, &Render->b_ViewAxis); TooltipOnHover("Axis");
+
+	//DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+	//ImGui::Text("%.3f %.1f FPS", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	ImGui::End();
 }
@@ -324,7 +398,7 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 void Global_Application::CenterPanel(ImVec2 Position, ImVec2 Size)
 {
 	ImGui::GetStyle().WindowBorderSize = 2.0f;
-	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1);
+	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1);
 
 	ImGui::SetNextWindowPos(Position);
 	ImGui::SetNextWindowSize(Size);
@@ -381,7 +455,7 @@ void Global_Application::CenterPanel(ImVec2 Position, ImVec2 Size)
 void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 {
 	ImGui::GetStyle().WindowBorderSize = 2.0f;
-	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderRed, m_BorderGreen, m_BorderBlue, 1);
+	ImGui::GetStyle().Colors[ImGuiCol_Border] = ImVec4(m_BorderColor.r, m_BorderColor.g, m_BorderColor.b, 1);
 
 	ImGui::SetNextWindowPos(Position);
 	ImGui::SetNextWindowSize(Size);
@@ -411,6 +485,9 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 
 		ImGui::MenuItem(" Collision##ModelEditor", NULL, &Geometry->b_CollisionDetection);
 		TooltipOnHover("Collision detection on/off");
+
+		ImGui::MenuItem(" Controller##ModelEditor", NULL, &Player->b_ControllerMode);
+		TooltipOnHover("Controller input on/off");
 
 		if (ImGui::BeginTable("Transform##PlayerRightPanel", 4))
 		{
