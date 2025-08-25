@@ -89,190 +89,180 @@ void Global_Application::ControllerMapping(void)
 	}
 }
 
-void Global_Application::ControllerInput(VECTOR2& Rotation)
+void Global_Application::ControllerInput(std::unique_ptr<Resident_Evil_Model>& Model)
 {
-	if (!Player->b_ControllerMode) { return; }
+	if (!Model->b_ControllerMode) { return; }
 
-	if (Player->b_QuickTurn.load())
+	VECTOR2& Rotation = Model->b_EditorMode ? Model->EditorRotation() : Model->Rotation();
+
+	if (Model->b_QuickTurn.load())
 	{
-		if (Player->m_QuickTurnRotation.load() <= 0)
+		if (Model->m_QuickTurnRotation.load() <= 0)
 		{
-			Player->b_QuickTurn.store(false);
-			Player->m_QuickTurnRotation.store(0);
-			Player->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
+			Model->b_QuickTurn.store(false);
+			Model->m_QuickTurnRotation.store(0);
+			Model->ResetFrame(Bio2PlayerState::Idle);
+			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
+			return;
 		}
 		else
 		{
-			Player->m_QuickTurnRotation -= 64;
+			Model->m_QuickTurnRotation -= 64;
 			Rotation.y += 64;
-			Player->b_EditorMode ? Player->ClampEditorRotation() : Player->ClampRotation();
+			Model->ClampRotation(Rotation);
 			return;
 		}
 	}
 
-	bool b_AimBegin = (Player->State() == Bio2PlayerState::Aim_Begin);
-	bool b_Firing = (Player->State() == Bio2PlayerState::Fire) || (Player->State() == Bio2PlayerState::Fire_Upward) || (Player->State() == Bio2PlayerState::Fire_Downward);
-	bool b_Aiming = (Player->State() == Bio2PlayerState::Aim) || (Player->State() == Bio2PlayerState::Aim_Upward) || (Player->State() == Bio2PlayerState::Aim_Downward);
+	bool b_AimBegin = (Model->State() == Bio2PlayerState::Aim_Begin);
+	bool b_Firing = (Model->State() == Bio2PlayerState::Fire) || (Model->State() == Bio2PlayerState::Fire_Upward) || (Model->State() == Bio2PlayerState::Fire_Downward);
+	bool b_Aiming = (Model->State() == Bio2PlayerState::Aim) || (Model->State() == Bio2PlayerState::Aim_Upward) || (Model->State() == Bio2PlayerState::Aim_Downward);
+	bool b_Running = (Model->PriorState() == Bio2PlayerState::Run) || (Model->PriorState() == Bio2PlayerState::Run_Caution) || (Model->PriorState() == Bio2PlayerState::Run_Danger);
 
-	bool b_Running = (Player->State() == Bio2PlayerState::Run) || (Player->State() == Bio2PlayerState::Run_Caution) || (Player->State() == Bio2PlayerState::Run_Danger);
-
-	if (!Gamepad->XInput()->PollState())
+	if (!Gamepad->PollState())
 	{
-		if (b_Firing)
+		if (b_AimBegin || b_Aiming || b_Firing || b_Running)
 		{
-			Player->SetNextState(Bio2PlayerState::Aim_Begin, AnimationIndex::Weapon);
-		}
-		else if (b_Aiming)
-		{
-			Player->b_Reverse.store(true);
-			Player->b_PlayAllFrames.store(true);
-			Player->b_WaitComplete.store(true);
-			Player->SetState(Bio2PlayerState::Aim_Begin, AnimationIndex::Weapon, 100, true, false);
-		}
-		else if (b_AimBegin)
-		{
-			Player->b_Reverse.store(true);
-			Player->b_PlayAllFrames.store(true);
-			Player->b_WaitComplete.store(true);
-			Player->SetNextState(Bio2PlayerState::Idle, AnimationIndex::Weapon);
+			Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
 		}
 		else
 		{
-			Player->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
+			Model->ResetFrame(Bio2PlayerState::Idle);
+			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
 		}
 		return;
 	}
 
-	b_Aiming |= b_Firing;
-
-	std::uint16_t Button = Gamepad->XInput()->Gamepad().wButtons;
-	bool b_TriggerL = Gamepad->XInput()->Gamepad().bLeftTrigger > 0;
-	bool b_TriggerR = Gamepad->XInput()->Gamepad().bRightTrigger > 0;
-
-	bool b_R1 = Gamepad->Map().R1.Button == 0xFFFF ? false : Button & Gamepad->Map().R1.Button;
-	Gamepad->Map().R1.IsLeftTrigger ? b_R1 |= b_TriggerL : 0;
-	Gamepad->Map().R1.IsRightTrigger ? b_R1 |= b_TriggerR : 0;
-
-	bool b_Circle = (Button & Gamepad->Map().Circle.Button);
-	bool b_Cross = (Button & Gamepad->Map().Cross.Button);
-	bool b_Square = (Button & Gamepad->Map().Square.Button);
-
-	bool b_Up = (Button & Gamepad->Map().Up.Button);
-	bool b_Right = (Button & Gamepad->Map().Right.Button);
-	bool b_Down = (Button & Gamepad->Map().Down.Button);
-	bool b_Left = (Button & Gamepad->Map().Left.Button);
-
-	bool b_IdleTurn = false;
+	bool b_Up = Gamepad->IsPressed(Gamepad->Map().Up);
+	bool b_Right = Gamepad->IsPressed(Gamepad->Map().Right);
+	bool b_Down = Gamepad->IsPressed(Gamepad->Map().Down);
+	bool b_Left = Gamepad->IsPressed(Gamepad->Map().Left);
 
 	if (b_Right || b_Left)
 	{
 		if (b_AimBegin || b_Aiming || b_Firing) { Rotation.y += (b_Right ? 12 : -12); }
 
-		else if (b_Running) { Rotation.y += (b_Right ? 14 : -14); }
+		else { Rotation.y += (b_Right ? 16 : -16); }
 
-		else { Rotation.y += (b_Right ? 12 : -12); }
-
-		Player->ClampRotation();
+		Model->ClampRotation(Rotation);
 	}
 
-	if (b_R1)
+	if (Model->b_IdleTurn.load() && (b_Up || b_Down))
 	{
+		Model->ResetFrame(Bio2PlayerState::Idle);
+		Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, 0, false, true);
+		Model->b_IdleTurn.store(false);
+	}
+
+	if (Gamepad->IsPressed(Gamepad->Map().R1))
+	{
+		bool b_Cross = Gamepad->IsPressed(Gamepad->Map().Cross);
+
 		if (b_AimBegin || b_Firing)
 		{
 		}
-		else if (b_Cross && (b_Aiming || b_Firing))
+		else if (b_Aiming && b_Cross && b_Up)
 		{
-			Player->SetState(Bio2PlayerState::Fire, AnimationIndex::Weapon, Player->iFrame.load(), true, true);
-			Player->b_PlayAllFrames.store(true);
-			Player->b_WaitComplete.store(true);
+			Model->SetState(Bio2PlayerState::Fire_Upward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
+			Model->b_PlayAllFrames.store(true);
+		}
+		else if (b_Aiming && b_Cross && b_Down)
+		{
+			Model->SetState(Bio2PlayerState::Fire_Downward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
+			Model->b_PlayAllFrames.store(true);
+		}
+		else if (b_Aiming && b_Cross)
+		{
+			Model->SetState(Bio2PlayerState::Fire, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
+			Model->b_PlayAllFrames.store(true);
+		}
+		else if (b_Aiming && b_Up)
+		{
+			Model->SetState(Bio2PlayerState::Aim_Upward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
+		}
+		else if (b_Aiming && b_Down)
+		{
+			Model->SetState(Bio2PlayerState::Aim_Downward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
 		}
 		else if (b_Aiming)
 		{
-			Player->SetState(Bio2PlayerState::Aim, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
+			Model->SetState(Bio2PlayerState::Aim, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
 		}
 		else if (!b_Aiming || !b_AimBegin)
 		{
-			Player->SetState(Bio2PlayerState::Aim_Begin, AnimationIndex::Weapon, 0, true, false);
-			Player->SetNextState(Bio2PlayerState::Aim, AnimationIndex::Weapon);
+			Model->SetState(Bio2PlayerState::Aim_Begin, AnimationIndex::Weapon, 0, true, false);
+			Model->SetNextState(Bio2PlayerState::Aim, AnimationIndex::Weapon);
+			Model->b_PlayAllFrames.store(true);
 		}
+	}
+	else if (b_AimBegin || b_Aiming || b_Firing)
+	{
+		Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
 	}
 	else if (b_Up)
 	{
-		if (b_Square)
+		if (Gamepad->IsPressed(Gamepad->Map().Square))
 		{
-			Player->ResetFrame(Bio2PlayerState::Run);
-			Player->SetState(Bio2PlayerState::Run, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
+			Model->ResetFrame(Bio2PlayerState::Run);
+			Model->SetState(Bio2PlayerState::Run, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
 		}
 		else
 		{
-			Player->ResetFrame(Bio2PlayerState::Walk_Forward);
-			Player->SetState(Bio2PlayerState::Walk_Forward, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
+			Model->ResetFrame(Bio2PlayerState::Walk_Forward);
+			Model->SetState(Bio2PlayerState::Walk_Forward, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
 		}
+	}
+	else if (b_Running)
+	{
+		Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
 	}
 	else if (b_Down)
 	{
-		Player->ResetFrame(Bio2PlayerState::Walk_Backward);
-		Player->SetState(Bio2PlayerState::Walk_Backward, AnimationIndex::Normal, Player->iFrame.load(), false, true);
+		Model->ResetFrame(Bio2PlayerState::Walk_Backward);
+		Model->SetState(Bio2PlayerState::Walk_Backward, AnimationIndex::Normal, Model->iFrame.load(), false, true);
 
-		if (b_Square)
+		if (Gamepad->IsPressed(Gamepad->Map().Square))
 		{
-			Player->b_QuickTurn.store(true);
-			Player->m_QuickTurnRotation.store(2048);
+			Model->b_QuickTurn.store(true);
+			Model->m_QuickTurnRotation.store(2048);
 			return;
 		}
 	}
-	else
+	else if (b_Right || b_Left)
 	{
-		if (b_Right || b_Left)
-		{
-			Player->ResetFrame(Bio2PlayerState::Idle);
-			Player->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Player->iFrame.load(), false, true);
-			b_IdleTurn = true;
-		}
+		Model->ResetFrame(Bio2PlayerState::Walk_Backward);
+		Model->SetState(Bio2PlayerState::Walk_Backward, AnimationIndex::Normal, Model->iFrame.load(), false, true);
+		Model->b_IdleTurn.store(true);
 	}
 
-	if (!b_AimBegin && !b_Aiming)
+	if (!Model->b_IdleTurn.load() && !b_AimBegin && !b_Aiming && !Model->b_EditorMode)
 	{
-		SVECTOR2 Delta{};
+		if (b_Firing && !Model->b_WeaponKickback) { return; }
 
-		std::int16_t X = 0, Z = 0;
+		auto& Animation = Model->Animation(Model->AnimIndex());
 
-		if (!Player->iFrame) { Player->Speed() = {}; }
+		auto iClip = min(Model->iClip.load(), Animation->GetClipCount() - 1);
 
-		if (Player->iFrame >= Player->Animation(Player->AnimIndex())->Clip[Player->iClip.load()].size())
+		auto iFrame = min(Model->iFrame.load(), Animation->GetFrameCount(iClip) - 1);
+
+		if (Animation->Clip.empty())
 		{
-			Player->iFrame.store(min(Player->iFrame.load(), Player->Animation(Player->AnimIndex())->GetFrameCount(Player->iClip.load()) - 1));
+			Model->ResetFrame(Bio2PlayerState::Idle);
+			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
+			return;
 		}
 
-		auto Speed = Player->Animation(Player->AnimIndex())->Clip[Player->iClip.load()][Player->iFrame.load()].Speed;
+		auto& Frame = Animation->Clip[iClip][iFrame];
 
-		if (b_IdleTurn)
-		{
-			Delta.x = Delta.y = Delta.z = 0;
-		}
-		else
-		{
-			Delta.x = Speed.x - Player->Speed().x;
-			Delta.y = Speed.y - Player->Speed().y;
-			Delta.z = Speed.z - Player->Speed().z;
-		}
+		if (!iFrame) { Model->Speed() = {}; }
 
-		Player->Speed() = { Speed.x, Speed.y, Speed.z };
+		SVECTOR2 Delta{ (Frame.Speed.x - Model->Speed().x), (Frame.Speed.y - Model->Speed().y), (Frame.Speed.z - Model->Speed().z) };
 
-		Player->AddSpeedXZ(Rotation.y, (SVECTOR*)&Delta, X, Z);
+		Model->Speed() = { Frame.Speed.x, Frame.Speed.y, Frame.Speed.z };
 
-		if (!Player->b_EditorMode)
-		{
-			Player->Position().x += X;
-			Player->Position().y += Delta.y;
-			Player->Position().z += Z;
-		}
+		Model->AddSpeedXZ((SVECTOR*)&Delta);
 
-		if (Player->Position().x >= 32767) { Player->Position().x = -Player->Position().x; }
-		else if (Player->Position().x <= -32767) { Player->Position().x = 32767; }
-
-		if (Player->Position().z >= 32767) { Player->Position().z = -Player->Position().z; }
-		else if (Player->Position().z <= -32767) { Player->Position().z = 32767; }
+		Model->ClampPosition(Model->Position());
 	}
 
 }

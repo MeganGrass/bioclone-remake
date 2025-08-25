@@ -15,7 +15,7 @@ void Global_Application::ModelEditor(void)
 		{
 			if (ImGui::MenuItem("Open##ModelFileMenu"))
 			{
-				OpenPlayerModel();
+				FilePool.Enqueue([this]() { OpenPlayerModel(); });
 			}
 			if (ImGui::MenuItem("Save As##ModelFileMenu", NULL, false, false))
 			{
@@ -38,11 +38,11 @@ void Global_Application::ModelEditor(void)
 		{
 			if (ImGui::MenuItem("Open##ModelTextureMenu"))
 			{
-				OpenPlayerTexture();
+				FilePool.Enqueue([this]() { OpenPlayerTexture(); });
 			}
 			if (ImGui::MenuItem("Save As##ModelTextureMenu"))
 			{
-				SavePlayerTexture();
+				FilePool.Enqueue([this]() { SavePlayerTexture(); });
 			}
 			ImGui::EndMenu();
 		}
@@ -140,7 +140,7 @@ void Global_Application::ModelEditor(void)
 		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 		ImGui::MenuItem(" Dither##ModelRender", NULL, &Player->b_Dither);
-		TooltipOnHover("Sony PlayStation (1994) Dithering Pixel Shader");
+		TooltipOnHover("Sony PlayStation (1994) Dithering Pixel Shader\r\n\r\nValid only when \"Textured\" is active");
 
 		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
@@ -161,7 +161,7 @@ void Global_Application::ModelEditor(void)
 
 		if (ImGui::MenuItem(" Wireframe##ModelRender", NULL, &Player->b_DrawWireframe))
 		{
-			Player->b_DrawWireframe = true;
+			Player->b_DrawWireframe = Player->b_DrawWireframe ? true : false;
 			Player->b_DrawSolidColor = false;
 			Player->b_DrawTextured = false;
 		}
@@ -170,7 +170,7 @@ void Global_Application::ModelEditor(void)
 		if (ImGui::MenuItem(" Solid##ModelRender", NULL, &Player->b_DrawSolidColor))
 		{
 			Player->b_DrawWireframe = false;
-			Player->b_DrawSolidColor = true;
+			Player->b_DrawSolidColor = Player->b_DrawSolidColor ? true : false;
 			Player->b_DrawTextured = false;
 		}
 		TooltipOnHover("Polygons will be drawn as solid color");
@@ -179,42 +179,51 @@ void Global_Application::ModelEditor(void)
 		{
 			Player->b_DrawWireframe = false;
 			Player->b_DrawSolidColor = false;
-			Player->b_DrawTextured = true;
+			Player->b_DrawTextured = Player->b_DrawTextured ? true : false;
 		}
 		TooltipOnHover("Polygons will be drawn as textured");
 
-		ImGui::MenuItem(" Skeleton##ModelRender", NULL, &Player->b_DrawSkeletonMesh);
-		TooltipOnHover("Skeleton mesh will be drawn");
+		ImGui::MenuItem(" Skeleton##ModelRender", NULL, &Player->b_DrawSkeleton);
+		TooltipOnHover("Skeleton will be drawn");
 
 		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::MenuItem(" Vertex Light##ModelRender", NULL, &b_PerVertexLighting)) { if (b_PerVertexLighting) { b_PerPixelLighting = false; } }
+		TooltipOnHover("Per-Vertex Lighting");
+
+		if (ImGui::MenuItem(" Pixel Light##ModelRender", NULL, &b_PerPixelLighting)) { if (b_PerPixelLighting) { b_PerVertexLighting = false; } }
+		TooltipOnHover("Per-Pixel Lighting");
 	}
 
-	if (ImGui::CollapsingHeader("Draw##ModelEditor", ImGuiTreeNodeFlags_None))
+	if (ImGui::CollapsingHeader("Object##ModelEditor", ImGuiTreeNodeFlags_None))
 	{
-		ImGui::MenuItem(" Hitbox##ModelDraw", NULL, &Player->b_DrawHitbox);
-		TooltipOnHover("Draw the model's interactive/collision hitbox");
+		TooltipOnHover("Model Objects");
 
-		if (ImGui::MenuItem(" All Objects##ModelDraw", NULL, &Player->b_DrawAllObjects))
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::MenuItem(" All Objects##ModelObject", NULL, &Player->b_DrawAllObjects))
 		{
 			Player->b_DrawReference = false;
 			Player->b_DrawSingleObject = false;
 		}
-		TooltipOnHover("Ignore keyframes and skeleton and draw all objects\r\nOnly draw weapon when \"Weapon\" is active");
+		TooltipOnHover("Draw all objects\r\n\r\nKeyframes and skeleton are ignored\r\n\r\nOnly draw weapon when \"Weapon\" is active");
 
-		if (ImGui::BeginTable("ModelDrawPanel##ModelDraw", 2))
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::BeginTable("ModelObjectPanel##ModelObject", 2))
 		{
 			ImGui::TableNextColumn();
-			if (ImGui::MenuItem(" Object##ModelDraw", NULL, &Player->b_DrawSingleObject))
+			if (ImGui::MenuItem(" Object##ModelObject", NULL, &Player->b_DrawSingleObject))
 			{
 				Player->b_DrawReference = false;
 				Player->b_DrawAllObjects = false;
 			}
-			TooltipOnHover(Standard_String().FormatCStyle("Ignore keyframes and skeleton and draw all object %d\r\nOnly draw weapon when \"Weapon\" is active", Player->iObject));
+			TooltipOnHover(Standard_String().FormatCStyle("Draw object %d\r\n\r\nKeyframes and skeleton are ignored\r\n\r\nOnly draw weapon when \"Weapon\" is active", Player->iObject));
 
 			ImGui::TableNextColumn();
 			ImGui::BeginDisabled(!Player->b_DrawSingleObject);
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
-			if (ImGui::SliderScalar("##ModelDrawObject", ImGuiDataType_U64, &Player->iObject, &Player->iObjectMin, &Player->iObjectMax))
+			if (ImGui::SliderScalar("##ModelObjectObject", ImGuiDataType_U64, &Player->iObject, &Player->iObjectMin, &Player->iObjectMax))
 			{
 				Player->iObject = std::clamp(Player->iObject, (size_t)0, Player->iObjectMax);
 			}
@@ -223,18 +232,177 @@ void Global_Application::ModelEditor(void)
 
 			ImGui::EndTable();
 		}
+	}
+
+	if (ImGui::CollapsingHeader("Hitbox##ModelEditor", ImGuiTreeNodeFlags_None))
+	{
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::MenuItem(" View##ModelHitbox", NULL, &Player->b_DrawHitbox);
+		TooltipOnHover("Draw the model's interactive/collision hitbox");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::BeginTable("Transform##ModelHitbox", 4))
+		{
+			ImGui::TableSetupColumn("Label##ModelHitbox", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("________").x);
+			ImGui::TableSetupColumn("X##ModelHitbox", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("________").x);
+			ImGui::TableSetupColumn("Y##ModelHitbox", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("________").x);
+			ImGui::TableSetupColumn("Z##ModelHitbox");
+			ImGui::TableNextRow();
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" Width");
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelHitboxWidth", ImGuiDataType_S32, &Player->Hitbox().w))
+				{
+					Player->Hitbox().w = std::clamp(Player->Hitbox().w, 0, 5400);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollOnHover(&Player->Hitbox().w, ImGuiDataType_S32, 32, 0, 5400))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				ImGui::TableNextColumn();
+				ImGui::TableNextColumn();
+
+				ImGui::TableNextColumn(); ImGui::Text(" Height");
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelHitboxHeight", ImGuiDataType_S32, &Player->Hitbox().h)) { Player->Hitbox().h = std::clamp(Player->Hitbox().h, -5400, 0); }
+				ScrollOnHover(&Player->Hitbox().h, ImGuiDataType_S32, 32, -5400, 0);
+				ImGui::TableNextColumn();
+				ImGui::TableNextColumn();
+
+				ImGui::TableNextColumn(); ImGui::Text(" Depth");
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelHitboxDepth", ImGuiDataType_S32, &Player->Hitbox().d))
+				{
+					Player->Hitbox().d = std::clamp(Player->Hitbox().d, 0, 5400);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollOnHover(&Player->Hitbox().d, ImGuiDataType_S32, 32, 0, 5400))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				ImGui::TableNextColumn();
+				ImGui::TableNextColumn();
+			}
+
+			ImGui::EndTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Shadow##ModelEditor", ImGuiTreeNodeFlags_None))
+	{
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::MenuItem(" View##ModelDraw", NULL, &Player->b_DrawShadow);
+		TooltipOnHover("Draw the model's shadow");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::BeginTable("Transform##ModelShadow", 4))
+		{
+			ImGui::TableSetupColumn("Label##ModelShadow", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("________").x);
+			ImGui::TableSetupColumn("X##ModelShadow", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("_________").x);
+			ImGui::TableSetupColumn("Y##ModelShadow", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("_________").x);
+			ImGui::TableSetupColumn("Z##ModelShadow");
+			ImGui::TableNextRow();
+
+			size_t PaletteCount = !Player->ModelDX9() || Player->ModelDX9()->Texture.empty() ? 0 : Player->ModelDX9()->Texture.size() - 1;
+			ImGui::TableNextColumn(); ImGui::Text(" Palette");
+			ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+			if (ImGui::InputScalar("##ModelShadowPalette", ImGuiDataType_U64, &Player->Shadow().TexID))
+			{
+				Player->Shadow().TexID = std::clamp(Player->Shadow().TexID, (size_t)0, PaletteCount);
+				Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+			}
+			if (ScrollOnHover(&Player->Shadow().TexID, ImGuiDataType_U64, 1, 0, PaletteCount))
+			{
+				Player->Shadow().TexID = std::clamp(Player->Shadow().TexID, (size_t)0, PaletteCount);
+				Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+			}
+			ImGui::TableNextColumn();
+			ImGui::TableNextColumn();
+
+			static float Dummy = 0;
+			float& TextureWidth = !Player->ModelDX9() ? Dummy : Player->ModelDX9()->TextureWidth;
+			float& TextureHeight = !Player->ModelDX9() ? Dummy : Player->ModelDX9()->TextureHeight;
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" X,Y");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelShadowX", ImGuiDataType_Float, &Player->Shadow().Rect.l))
+				{
+					Player->Shadow().Rect.l = std::clamp(Player->Shadow().Rect.l, 0.0f, TextureWidth);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollFloatOnHover(&Player->Shadow().Rect.l, ImGuiDataType_Float, 1.0, 0.0, TextureWidth))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelShadowY", ImGuiDataType_Float, &Player->Shadow().Rect.t))
+				{
+					Player->Shadow().Rect.t = std::clamp(Player->Shadow().Rect.t, 0.0f, TextureHeight);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollFloatOnHover(&Player->Shadow().Rect.t, ImGuiDataType_Float, 1.0, 0.0, TextureHeight))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);  ImGui::Text(" ");
+			}
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" W,H");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelShadowW", ImGuiDataType_Float, &Player->Shadow().Size.w))
+				{
+					Player->Shadow().Size.w = std::clamp(Player->Shadow().Size.w, 0.0f, TextureWidth);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollFloatOnHover(&Player->Shadow().Size.w, ImGuiDataType_Float, 1.0, 0.0, TextureWidth))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##ModelShadowH", ImGuiDataType_Float, &Player->Shadow().Size.h))
+				{
+					Player->Shadow().Size.h = std::clamp(Player->Shadow().Size.h, 0.0f, TextureHeight);
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+				if (ScrollFloatOnHover(&Player->Shadow().Size.h, ImGuiDataType_Float, 1.0, 0.0, TextureHeight))
+				{
+					Player->SetShadow(Player->Shadow().TexID, (int16_t)Player->Shadow().Rect.l, (int16_t)Player->Shadow().Rect.t, (int16_t)Player->Shadow().Size.w, (int16_t)Player->Shadow().Size.h);
+				}
+			}
+
+			ImGui::EndTable();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Weapon##ModelEditor", ImGuiTreeNodeFlags_None))
+	{
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 		ImGui::BeginDisabled(Player->WeaponModelDX9() ? Player->WeaponModelDX9()->Object.empty() : true);
-		if (ImGui::BeginTable("Weapon##ModelDrawWeapon", 2))
+
+		if (ImGui::BeginTable("Weapon##ModelWeapon", 2))
 		{
 			ImGui::TableNextColumn();
-			ImGui::MenuItem(" Weapon##ModelDraw", NULL, &Player->b_DrawWeapon);
+			ImGui::MenuItem(" Active##ModelWeapon", NULL, &Player->b_DrawWeapon);
 			TooltipOnHover("Draw weapon model");
 
 			ImGui::TableNextColumn();
 			ImGui::BeginDisabled(!Player->b_DrawWeapon);
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
-			if (ImGui::SliderScalar("##ModelDrawWeaponID", ImGuiDataType_U64, &Player->iWeaponObject, &Player->iWeaponObjectMin, &Player->iWeaponObjectMax))
+			if (ImGui::SliderScalar("##ModelWeaponID", ImGuiDataType_U64, &Player->iWeaponObject, &Player->iWeaponObjectMin, &Player->iWeaponObjectMax))
 			{
 				Player->iWeaponObject = std::clamp(Player->iWeaponObject, (size_t)0, Player->iWeaponObjectMax);
 			}
@@ -244,6 +412,12 @@ void Global_Application::ModelEditor(void)
 
 			ImGui::EndTable();
 		}
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::MenuItem(" Kickback##ModelWeapon", NULL, &Player->b_WeaponKickback);
+		TooltipOnHover("Position change on weapon discharge");
+
 		ImGui::EndDisabled();
 	}
 
@@ -349,6 +523,18 @@ void Global_Application::ModelEditor(void)
 
 	if (ImGui::CollapsingHeader("Playback##ModelEditor", ImGuiTreeNodeFlags_None))
 	{
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::BeginDisabled((Player->ModelGame() & BIO2) == 0 || (Player->WeaponModelGame() & BIO2) == 0);	// temp
+		ImGui::BeginDisabled((!Player->ModelDX9() || !Player->WeaponModelDX9()) && Player->Animation(AnimationIndex::Weapon)->Clip.empty());
+		if (ImGui::MenuItem(" Controller##ModelPlayback", NULL, &Player->b_ControllerMode))
+		{
+			if (Player->b_ControllerMode) { Player->b_LockPosition = true; }
+		}
+		TooltipOnHover("Controller input on/off\r\n\r\nWeapon must be open");
+		ImGui::EndDisabled();
+		ImGui::EndDisabled();
+
 		if (ImGui::MenuItem(" Root##ModelPlayback", NULL, &Player->b_DrawReference))
 		{
 			Player->b_DrawSingleObject = false;
@@ -356,18 +542,24 @@ void Global_Application::ModelEditor(void)
 		}
 		TooltipOnHover("Ignore keyframes, use skeleton reference instead");
 
+		ImGui::BeginDisabled(Player->b_ControllerMode);
 		ImGui::MenuItem(" Lock##ModelPlayback", NULL, &Player->b_LockPosition);
 		TooltipOnHover("Lock model in position when drawing keyframes");
+		ImGui::EndDisabled();
 
-		ImGui::MenuItem(" Play##ModelPlayback", NULL, &Player->b_Play);
+		bool b_Value = Player->b_Play.load();
+		if (ImGui::MenuItem(" Play##ModelPlayback", NULL, &b_Value)) { Player->b_Play.store(!Player->b_Play.load()); }
 		TooltipOnHover("Play/Pause clip playback");
 
-		ImGui::MenuItem(" Loop##ModelPlayback", NULL, &Player->b_Loop);
+		b_Value = Player->b_Loop.load();
+		if (ImGui::MenuItem(" Loop##ModelPlayback", NULL, &b_Value)) { Player->b_Loop.store(!Player->b_Loop.load()); }
 		TooltipOnHover("Loop clip playback");
 
 		if (ImGui::BeginTable("Lerp##ModelPlayback", 2))
 		{
-			ImGui::TableNextColumn(); ImGui::MenuItem(" Lerp##ModelPlayback", NULL, &Player->b_LerpKeyframes);
+			ImGui::TableNextColumn();
+			b_Value = Player->b_LerpKeyframes.load();
+			if (ImGui::MenuItem(" Lerp##ModelPlayback", NULL, &b_Value)) { Player->b_LerpKeyframes.store(!Player->b_LerpKeyframes.load()); }
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
@@ -379,6 +571,24 @@ void Global_Application::ModelEditor(void)
 
 			ImGui::EndTable();
 		}
+
+		ImGui::BeginDisabled(Player->b_ControllerMode);
+		if (ImGui::BeginTable("Clip##ModelPlayback", 2))
+		{
+			ImGui::TableNextColumn(); ImGui::Text(" Clip");
+
+			size_t ClipCount = Player->Animation(Player->AnimIndex())->GetClipCount();
+			size_t iClipMin = 0;
+			size_t iClipMax = ClipCount ? ClipCount - 1 : 0;
+
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
+			ImGui::SliderScalar("##ModelPlaybackClip", ImGuiDataType_U64, &Player->iClip, &iClipMin, &iClipMax);
+			ScrollOnHover(&Player->iClip, ImGuiDataType_U64, 1, iClipMin, iClipMax);
+
+			ImGui::EndTable();
+		}
+		ImGui::EndDisabled();
 
 		if (ImGui::BeginTable("Keyframe##ModelPlayback", 2))
 		{

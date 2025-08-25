@@ -9,6 +9,7 @@
 
 bool Global_Application::IsRoomOpen(void)
 {
+	if (b_RoomFileOp) { return false; }
 	switch (Game)
 	{
 	case Video_Game::Resident_Evil_2_Nov_6_1996:
@@ -45,6 +46,8 @@ void Global_Application::CloseRDT(void)
 	Geometry->iObjectMax = 0;
 
 	Player->CloseRoom();
+
+	ResetLighting();
 }
 
 void Global_Application::OpenRDT(void)
@@ -77,6 +80,8 @@ void Global_Application::OpenRDT(void)
 				Camera->Set(Bio2->Rdt->Rid->Get(0)->ViewR >> 7, Bio2->Rdt->Rid->Get(0)->View_p, Bio2->Rdt->Rid->Get(0)->View_r);
 
 				Geometry->iObjectMax = Bio2->Rdt->Sca->Count() ? Bio2->Rdt->Sca->Count() - 1 : 0;
+
+				SetLighting();
 			}
 			break;
 		}

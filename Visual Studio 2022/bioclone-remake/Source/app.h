@@ -71,14 +71,19 @@ private:
 	bool b_IgnoreAutoResize;
 
 	bool b_ViewWindowOptions;
+	bool b_ShowFPS;
 
 	bool b_Shutdown;
+
+	bool b_PerVertexLighting;
+	bool b_PerPixelLighting;
 
 	std::function<void()> Modal;
 
 	Standard_Thread_Pool ThreadPool;
-	Standard_Thread_Pool CollisionPool;
-	mutable std::mutex CollisionMutex;
+
+	Standard_Thread_Pool FilePool;
+	bool b_RoomFileOp;
 
 	std::atomic<bool> b_RoomcutExtraction;
 	std::filesystem::path m_RoomcutNameID;
@@ -98,6 +103,8 @@ private:
 	std::shared_ptr<Resident_Evil_Animation> Rbj;
 
 	std::unique_ptr<Resident_Evil_Model> Player;
+	std::filesystem::path m_BootPlayerFilename;
+	std::filesystem::path m_BootWeaponFilename;
 
 	std::unique_ptr<ImGuiContext, decltype(&ImGui::DestroyContext)> Context;
 
@@ -132,15 +139,17 @@ private:
 	void ModelEditor(void);
 
 	void ControllerMapping(void);
-	void ControllerInput(VECTOR2& Rotation);
+	void ControllerInput(std::unique_ptr<Resident_Evil_Model>& Model);
 
-	void DrawBackground(void) const;
+	void DrawBackground(void);
 	void DrawCamera(void);
 	void DrawSprite(void);
 	void DrawSwitch(void);
 	void DrawCollision(void);
 	void DrawBlock(void);
 	void DrawFloor(void);
+	void ResetLighting(void) const;
+	void SetLighting(void);
 	void Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox);
 	void CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox);
 
@@ -226,14 +235,18 @@ public:
 		b_IgnoreAutoResize(false),
 		b_SetMaxRenderSize(false),
 		b_ViewWindowOptions(false),
+		b_ShowFPS(false),
 		b_Shutdown(false),
+		b_PerVertexLighting(false),
+		b_PerPixelLighting(false),
+		b_RoomFileOp(false),
 		m_RoomcutProgress(0.0f),
 		b_RoomcutExtraction(false),
 		b_ControllerMapping(false),
 		b_Active(true)
 	{
 		ThreadPool.InitPool(1);
-		CollisionPool.InitPool(1);
+		FilePool.InitPool(1);
 		Game = Video_Game::Resident_Evil_2;
 		Camera = std::make_unique<Resident_Evil_Camera>(Render, GTE);
 		Geometry = std::make_unique<Resident_Evil_Geometry>(Render, GTE);

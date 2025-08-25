@@ -108,9 +108,24 @@ void Global_Application::OpenConfig(void)
 				b_IgnoreAutoResize = std::stoi(Args[1]);
 			}
 
+			if (Standard_String().ToUpper(Args[0]) == L"B_SHOWFPS")
+			{
+				b_ShowFPS = std::stoi(Args[1]);
+			}
+
 			if (Standard_String().ToUpper(Args[0]) == L"B_VIEWWINDOWOPTIONS")
 			{
 				b_ViewWindowOptions = std::stoi(Args[1]);
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"B_PERVERTEXLIGHTING")
+			{
+				b_PerVertexLighting = b_PerPixelLighting ? false : std::stoi(Args[1]);
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"B_PERPIXELLIGHTING")
+			{
+				b_PerPixelLighting = b_PerVertexLighting ? false : std::stoi(Args[1]);
 			}
 
 			if (Standard_String().ToUpper(Args[0]) == L"B_VIEWGRID")
@@ -223,9 +238,9 @@ void Global_Application::OpenConfig(void)
 				Player->b_DrawTextured = std::stoi(Args[1]);
 			}
 
-			if (Standard_String().ToUpper(Args[0]) == L"B_MODELDRAWSKELETONMESH")
+			if (Standard_String().ToUpper(Args[0]) == L"B_MODELDRAWSKELETON")
 			{
-				Player->b_DrawSkeletonMesh = std::stoi(Args[1]);
+				Player->b_DrawSkeleton = std::stoi(Args[1]);
 			}
 
 			if (Standard_String().ToUpper(Args[0]) == L"B_MODELDRAWREFERENCE")
@@ -236,6 +251,11 @@ void Global_Application::OpenConfig(void)
 			if (Standard_String().ToUpper(Args[0]) == L"B_MODELDRAWHITBOX")
 			{
 				Player->b_DrawHitbox = std::stoi(Args[1]);
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"B_MODELDRAWSHADOW")
+			{
+				Player->b_DrawShadow = std::stoi(Args[1]);
 			}
 
 			if (Standard_String().ToUpper(Args[0]) == L"B_MODELTEXTUREDITHER")
@@ -272,6 +292,16 @@ void Global_Application::OpenConfig(void)
 			{
 				Player->m_LerpValue = std::stof(Args[1]);
 				Player->m_LerpValue = std::round(Player->m_LerpValue * 20.0f) / 20.0f;
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"M_MODELFILENAME")
+			{
+				m_BootPlayerFilename = Args[1];
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"M_MODELWEAPONFILENAME")
+			{
+				m_BootWeaponFilename = Args[1];
 			}
 
 			if (Standard_String().ToUpper(Args[0]) == L"M_AIM")
@@ -369,11 +399,6 @@ void Global_Application::OpenConfig(void)
 				Gamepad->Map().Right.IsLeftTrigger = std::stoi(Args[1]) == 1;
 				Gamepad->Map().Right.IsRightTrigger = std::stoi(Args[1]) == 2;
 			}
-
-			if (Standard_String().ToUpper(Args[0]) == L"B_MODELCONTROLLER")
-			{
-				Player->b_ControllerMode = std::stoi(Args[1]);
-			}
 		}
 	}
 }
@@ -404,6 +429,7 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"b_Maximized\t%d\r", Window->IsMaximized());
 	Text->AddLine(L"b_Fullscreen\t%d\r", Window->IsFullscreen());
 	Text->AddLine(L"b_IgnoreAutoResize\t%d\r", b_IgnoreAutoResize);
+	Text->AddLine(L"b_ShowFPS\t%d\r", b_ShowFPS);
 
 	Text->AddLine(L"m_Aim\t%d\r", Gamepad->GetButtonMapBit("Aim"));
 	Text->AddLine(L"m_Cancel\t%d\r", Gamepad->GetButtonMapBit("Cancel"));
@@ -423,6 +449,9 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"m_RightShoulder\t%d\r", Gamepad->Map().Right.IsLeftTrigger ? 1 : Gamepad->Map().Right.IsRightTrigger ? 2 : 0);
 
 	Text->AddLine(L"b_ViewWindowOptions\t%d\r", b_ViewWindowOptions);
+
+	Text->AddLine(L"b_PerVertexLighting\t%d\r", b_PerVertexLighting);
+	Text->AddLine(L"b_PerPixelLighting\t%d\r", b_PerPixelLighting);
 
 	Text->AddLine(L"b_ViewGrid\t%d\r", Render->b_ViewGrid);
 	Text->AddLine(L"b_ViewAxis\t%d\r", Render->b_ViewAxis);
@@ -450,15 +479,17 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"b_ModelDrawWireframe\t%d\r", Player->b_DrawWireframe);
 	Text->AddLine(L"b_ModelDrawSolidColor\t%d\r", Player->b_DrawSolidColor);
 	Text->AddLine(L"b_ModelDrawTextured\t%d\r", Player->b_DrawTextured);
-	Text->AddLine(L"b_ModelDrawSkeletonMesh\t%d\r", Player->b_DrawSkeletonMesh);
+	Text->AddLine(L"b_ModelDrawSkeleton\t%d\r", Player->b_DrawSkeleton);
 	Text->AddLine(L"b_ModelDrawHitbox\t%d\r", Player->b_DrawHitbox);
+	Text->AddLine(L"b_ModelDrawShadow\t%d\r", Player->b_DrawShadow);
 	Text->AddLine(L"b_ModelDrawReference\t%d\r", Player->b_DrawReference);
 	Text->AddLine(L"b_ModelLockPosition\t%d\r", Player->b_LockPosition);
 	Text->AddLine(L"b_ModelPlay\t%d\r", Player->b_Play.load());
 	Text->AddLine(L"b_ModelLoop\t%d\r", Player->b_Loop.load());
 	Text->AddLine(L"b_ModelLerp\t%d\r", Player->b_LerpKeyframes.load());
 	Text->AddLine(L"m_ModelLerpValue\t%f\r", Player->m_LerpValue);
-	Text->AddLine(L"b_ModelController\t%d\r", Player->b_ControllerMode);
+	Text->AddLine(L"m_ModelFilename\t\"%ws\"\r", Player->Filename().wstring().c_str());
+	Text->AddLine(L"m_ModelWeaponFilename\t\"%ws\"\r", Player->WeaponFilename().wstring().c_str());
 
 	Text->FlushUTF16();
 }

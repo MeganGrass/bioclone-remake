@@ -7,8 +7,9 @@
 
 #include "app.h"
 
-void Global_Application::DrawBackground(void) const
+void Global_Application::DrawBackground(void)
 {
+	if (!IsRoomOpen()) { return; }
 	if (!Camera->b_ViewTopDown && !Camera->b_ViewModelEdit && Camera->b_ViewBackground && Camera->m_Background)
 	{
 #if MSTD_DX9
@@ -18,11 +19,10 @@ void Global_Application::DrawBackground(void) const
 
 		Render->AlphaTesting(FALSE, 0x00, D3DCMP_NEVER);
 
-		Render->Draw({ Camera->m_BackgroundVert.get(), nullptr, Camera->m_Background.get(), Render->PassthroughPixelShader.get(),
-			{ TRUE, D3DZB_TRUE, D3DCMP_LESSEQUAL },
-			{ sizeof(vec4t), D3DFILL_SOLID, D3DPT_TRIANGLESTRIP },
-			{ Camera->m_TexWidth, Camera->m_TexHeight },
-			{ nullptr, nullptr, (D3DXMATRIX*)Camera->Orthogonal.get() } });
+		Render->DrawVec4t(
+			Camera->m_BackgroundVert.get(), Camera->m_Background.get(), Render->PassthroughPixelShader.get(),
+			Camera->m_TexWidth, Camera->m_TexHeight,
+			(D3DXMATRIX*)Camera->Orthogonal.get());
 	}
 #endif
 }
@@ -85,7 +85,7 @@ void Global_Application::DrawSprite(void)
 	if (Camera->b_ViewTopDown || Camera->b_ViewModelEdit || !Camera->b_ViewSprite || !IsRoomOpen()) { return; }
 
 	{
-		Render->SetDepthScale(32.0f, 16384.0f);
+		Render->SetDepthScale(-1.013f, -2048.000f);
 
 		Render->AlphaBlending(TRUE, D3DBLEND_SRCALPHA, D3DBLEND_INVSRCALPHA);
 
@@ -113,7 +113,7 @@ void Global_Application::DrawSprite(void)
 				float OffsetU = 0.5f / Camera->m_TexSprWidth;
 				float OffsetV = 0.5f / Camera->m_TexSprHeight;
 #else
-				float OffsetU  = 0.0f;
+				float OffsetU = 0.0f;
 				float OffsetV = 0.0f;
 #endif
 
@@ -134,11 +134,10 @@ void Global_Application::DrawSprite(void)
 				std::unique_ptr<IDirect3DVertexBuffer9, IDirect3DDelete9<IDirect3DVertexBuffer9>> Vertices;
 				Vertices.reset(Render->CreateVec4t(Vector));
 
-				Render->Draw({ Vertices.get(), nullptr, Camera->m_Sprite.get(), Render->PassthroughPixelShader.get(),
-					{ TRUE, D3DZB_TRUE, D3DCMP_LESSEQUAL },
-					{ sizeof(vec4t), D3DFILL_SOLID, D3DPT_TRIANGLESTRIP },
-					{ Camera->m_TexSprWidth, Camera->m_TexSprHeight },
-					{ nullptr, nullptr, (D3DXMATRIX*)Camera->Orthogonal.get() } });
+				Render->DrawVec4t(
+					Vertices.get(), Camera->m_Sprite.get(), Render->PassthroughPixelShader.get(),
+					Camera->m_TexSprWidth, Camera->m_TexSprHeight,
+					(D3DXMATRIX*)Camera->Orthogonal.get());
 #endif
 			}
 		}
@@ -255,10 +254,54 @@ void Global_Application::DrawFloor(void)
 	}
 }
 
+void Global_Application::ResetLighting(void) const
+{
+	Render->SetPSXLightMag(0);
+
+	Render->SetPSXLightAmbient({ 64, 64, 64 });
+
+	for (std::size_t i = 0; i < 3; i++)
+	{
+		if (i == 0)
+		{
+			Render->SetPSXLight(i, 0, { 128, 128, 128 }, { 5400, -1800, 0 }, 7500);
+		}
+		else
+		{
+			Render->SetPSXLight(i, 0, { 0, 0, 0 }, { 0, 0, 0 }, 0);
+		}
+	}
+
+	Render->UpdateLightConstants();
+}
+
+void Global_Application::SetLighting(void)
+{
+	if (!IsRoomOpen()) { ResetLighting(); return; }
+
+	uint8_t Cut = Camera->Cut;
+
+	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	{
+		Render->SetPSXLightMag(Bio2->Rdt->Lit->Get(Cut)->Mag);
+
+		Render->SetPSXLightAmbient({ (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.r, (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.g, (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.b });
+
+		for (std::size_t i = 0; i < 3; i++)
+		{
+			Render->SetPSXLight(i,
+				Bio2->Rdt->Lit->Get(Cut)->Mode[i],
+				{ (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].r, (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].g, (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].b },
+				{ (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].x, (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].y, (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].z },
+				Bio2->Rdt->Lit->Get(Cut)->L[i]);
+		}
+	}
+
+	Render->UpdateLightConstants();
+}
+
 void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox)
 {
-	std::lock_guard<std::mutex> lock(CollisionMutex);
-
 	if (!Geometry->b_CollisionDetection) { return; }
 
 	if (Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
@@ -300,9 +343,7 @@ void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEV
 
 void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 {
-	std::lock_guard<std::mutex> lock(CollisionMutex);
-
-	if (!Geometry->b_SwitchDetection) { return; }
+	if (!Geometry->b_SwitchDetection || !IsRoomOpen()) { return; }
 
 	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
 	{
@@ -318,11 +359,12 @@ void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 
 			if (Data[i].Fcut == Camera->Cut)
 			{
-				if (Geometry->CameraSwitch(Position, Hitbox, Data[i].Xz))
+				if (Geometry->CameraSwitch(Position, Data[i].Xz))
 				{
 					uint8_t Cut = Data[i].Tcut;
 					Camera->SetImage(Cut);
 					Camera->Set(Bio2->Rdt->Rid->Get(Cut)->ViewR >> 7, Bio2->Rdt->Rid->Get(Cut)->View_p, Bio2->Rdt->Rid->Get(Cut)->View_r);
+					SetLighting();
 					return;
 				}
 			}

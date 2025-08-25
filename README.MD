@@ -35,6 +35,7 @@ Background and Mask images must be located in same directory as RDT
 
 ## Images
 ![Preliminary Test](/images/preliminary_test.jpg?raw=true "Preliminary Test")
+![Preliminary Test](/images/preliminary_test_2.jpg?raw=true "Preliminary Test 2, lighting, \"shadow\"")
 
 ## TODO
 - a lot :)

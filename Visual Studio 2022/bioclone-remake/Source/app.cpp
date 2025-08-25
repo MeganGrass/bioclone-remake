@@ -81,17 +81,10 @@ void Global_Application::RenderScene(void)
 	}
 
 	{
-		ControllerInput(Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation());
-
-		CameraSwitch(Player->Position(), Player->Hitbox());
-
-		CollisionPool.Enqueue([this]()
-			{
-				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
-			});
-
 		Render->Device()->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
 		Render->Device()->SetRenderState(D3DRS_CLIPPING, FALSE);
+
+		Render->SetPSXLightToggle(false, true);
 
 		if (Render->b_ViewGrid) { Render->DrawGrid(); }
 
@@ -111,14 +104,7 @@ void Global_Application::RenderScene(void)
 
 		DrawFloor();
 
-		if (Player->b_DrawHitbox) { Geometry->DrawCylinder(Player->HitboxShape(), Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation(), 0x00C5C5C5, true); }
-
-		Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_BORDER);
-		Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_BORDER);
-		Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSW, D3DTADDRESS_BORDER);
-		Render->Device()->SetSamplerState(0, D3DSAMP_BORDERCOLOR, 0x00000000);
-
-		Player->Draw();
+		Player->Routine();
 	}
 
 	{
@@ -261,6 +247,7 @@ void Global_Application::Input(void)
 				{
 					uint8_t i = Camera->SetImage(--Camera->Cut);
 					Camera->Set(Bio2->Rdt->Rid->Get(i)->ViewR >> 7, Bio2->Rdt->Rid->Get(i)->View_p, Bio2->Rdt->Rid->Get(i)->View_r);
+					SetLighting();
 				}
 				break;
 			}
@@ -284,6 +271,7 @@ void Global_Application::Input(void)
 				{
 					uint8_t i = Camera->SetImage(++Camera->Cut);
 					Camera->Set(Bio2->Rdt->Rid->Get(i)->ViewR >> 7, Bio2->Rdt->Rid->Get(i)->View_p, Bio2->Rdt->Rid->Get(i)->View_r);
+					SetLighting();
 				}
 				break;
 			}
@@ -488,21 +476,57 @@ void Global_Application::InitGame(void)
 
 		Camera->Set(Camera->m_FOV, Camera->m_Eye, Camera->m_At);
 	}
+	{
+		ResetLighting();
+	}
 
 	{
-		Player->GTE = GTE;
-
-		Player->Render = Render;
-
-		Player->b_HorzFlip = Camera->b_HorzFlip;
-
-		Player->b_VertFlip = Camera->b_VertFlip;
-
-		Player->SetWindow(Window->Get());
+		Player->PlatformSetup(Window->Get(), GTE, Render, Camera->b_HorzFlip, Camera->b_VertFlip);
 
 		Player->Hitbox().w = 450;
 		Player->Hitbox().h = -1530;
 		Player->Hitbox().d = 450;
+
+		Player->Routine = [this]() -> void
+			{
+				if (Player->ModelGame() & BIO2 && Player->WeaponModelGame() & BIO2)
+				{
+					ControllerInput(Player);
+				}
+
+				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
+
+				CameraSwitch(Player->Position(), Player->Hitbox());
+
+				if (Player->b_DrawHitbox) { Geometry->DrawCylinder(Player->HitboxShape(), Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation(), 0x00C5C5C5, true); }
+
+				Render->SetPSXLightToggle(b_PerPixelLighting, !b_PerPixelLighting && !b_PerVertexLighting ? true : false);
+
+				Player->Draw();
+
+				Render->SetPSXLightToggle(true, false);
+
+				Player->DrawShadow();
+			};
+
+		if (Standard_FileSystem().Exists(m_BootPlayerFilename))
+		{
+			Player->Open(m_BootPlayerFilename);
+		}
+
+		if (Standard_FileSystem().Exists(m_BootWeaponFilename) && Player->ModelDX9() && Player->Open(m_BootWeaponFilename) && !Player->Animation(AnimationIndex::Weapon)->Clip.empty())
+		{
+			Player->AnimIndex(AnimationIndex::Weapon);
+			Player->iClip.store(2);
+		}
+
+		if (Player->ModelGame() & BIO2 && Player->WeaponModelGame() & BIO2 && Player->ModelDX9() && Player->WeaponModelDX9() && !Player->Animation(AnimationIndex::Weapon)->Clip.empty())	// temp ModelGame check
+		{
+			Player->b_Play.store(true);
+			Player->b_Loop.store(true);
+			Player->b_LockPosition = true;
+			Player->b_ControllerMode = true;
+		}
 	}
 }
 
@@ -516,7 +540,7 @@ void Global_Application::Shutdown(void)
 
 	Modal = []() {};
 
-	if (b_ControllerMapping || b_RoomcutExtraction)
+	if (b_ControllerMapping.load() || b_RoomcutExtraction.load())
 	{
 		b_ControllerMapping.store(false);
 		b_RoomcutExtraction.store(false);
@@ -525,21 +549,17 @@ void Global_Application::Shutdown(void)
 
 		while (true)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-			if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(2))
-			{
-				break;
-			}
+			std::this_thread::yield();
+			if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
 		}
 	}
 
 	auto StartTime = std::chrono::steady_clock::now();
 
-	while (!ThreadPool.Stop() && !CollisionPool.Stop())
+	while (!ThreadPool.Stop())
 	{
-		if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(5)) { break; }
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::yield();
+		if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
 	}
 
 	Render->b_ViewGrid = false;
@@ -572,8 +592,6 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 	InitGame();
 
 	MSG msg{ Window->Get(), 0U, 0U, 0, 0U, { 0, 0 } };
-
-	Window->ChronoTimerInit(60.0);
 	
 	while (b_Active)
 	{
@@ -589,13 +607,13 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 			Window->AutoFullscreen();
 		}
 
-		Window->ChronoTimerUpdate();
+		if (!Window->GetDroppedFiles().empty()) { DragAndDrop(Window->GetDroppedFiles()); Window->GetDroppedFiles().clear(); }
+
+		Window->ChronoTimerInit(59.94);
 
 		ThreadPool.Enqueue([this]()
 			{
 				if (!b_Active || Window->IsMinimized() || !Render->NormalState() || !Context) { return; }
-
-				if (!Window->GetDroppedFiles().empty()) { DragAndDrop(Window->GetDroppedFiles()); Window->GetDroppedFiles().clear(); }
 
 				Input();
 

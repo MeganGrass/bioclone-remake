@@ -15,39 +15,42 @@ void Global_Application::MainMenu(void)
 		{
 			if (ImGui::MenuItem("Open##FileMenu", "CTRL+O"))
 			{
-				OpenRDT();
+				FilePool.Enqueue([&]() { b_RoomFileOp = true; OpenRDT(); b_RoomFileOp = false; });
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Create##FileMenu", "CTRL+N"))
 			{
-				//
+				// FilePool.Enqueue([&]() { b_RoomFileOp = true; CreateRDT(); b_RoomFileOp = false; });
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Save As##FileMenu", "CTRL+S"))
 			{
-				SaveRDT();
+				FilePool.Enqueue([&]() { b_RoomFileOp = true; SaveRDT(); b_RoomFileOp = false; });
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Close##FileMenu", NULL))
 			{
-				CloseRDT();
+				FilePool.Enqueue([&]() { CloseRDT(); });
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Roomcut##FileMenu", NULL))
 			{
-				if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+				FilePool.Enqueue([&]()
+					{
+						if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
 
-				if (auto Filename = Window->GetOpenFilename({ L"roomcut.bin" }, { L"roomcut.bin" }); Filename.has_value())
-				{
-					RoomcutExtract(Filename.value());
-				}
+						if (auto Filename = Window->GetOpenFilename({ L"roomcut.bin" }, { L"roomcut.bin" }); Filename.has_value())
+						{
+							RoomcutExtract(Filename.value());
+						}
 
-				CoUninitialize();
+						CoUninitialize();
+					});
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Screenshot##FileMenu", NULL))
 			{
-				Screenshot();
+				FilePool.Enqueue([&]() { Screenshot(); });
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Exit##FileMenu", "ESC"))
@@ -230,6 +233,10 @@ void Global_Application::Options(void)
 				b_RequestRenderResize = true;
 			}
 
+			ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+			ImGui::Checkbox(" Show FPS##RenderSceneHeight", &b_ShowFPS);
+			TooltipOnHover("Display the frames per second");
+
 			ImGui::EndTable();
 		}
 	}
@@ -259,6 +266,8 @@ void Global_Application::RenderWindow(void)
 		{
 			float m_TextureWidth = (float)(G->m_RenderDesc.Width);
 			float m_TextureHeight = (float)(G->m_RenderDesc.Height);
+
+			G->Render->SetPSXLightToggle(false, true);
 
 			G->Render->Device()->SetPixelShaderConstantF(0, &m_TextureWidth, 1);
 			G->Render->Device()->SetPixelShaderConstantF(1, &m_TextureHeight, 1);
@@ -388,9 +397,12 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 
 	ImGui::MenuItem(" Axis##LeftPanel", NULL, &Render->b_ViewAxis); TooltipOnHover("Axis");
 
-	//DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+	if (b_ShowFPS)
+	{
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
-	//ImGui::Text("%.3f %.1f FPS", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Text("%.3f %.1f FPS", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	}
 
 	ImGui::End();
 }
@@ -483,11 +495,35 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 	{
 		TooltipOnHover("Position, Rotation and Scale");
 
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::BeginDisabled((Player->ModelGame() & BIO2) == 0 || (Player->WeaponModelGame() & BIO2) == 0);	// temp
+		ImGui::BeginDisabled((!Player->ModelDX9() || !Player->WeaponModelDX9()) && Player->Animation(AnimationIndex::Weapon)->Clip.empty());
+		if (ImGui::MenuItem(" Controller##ModelEditor", NULL, &Player->b_ControllerMode))
+		{
+			if (Player->b_ControllerMode) { Player->b_LockPosition = true; }
+		}
+		TooltipOnHover("Controller input on/off\r\n\r\nWeapon must be open");
+		ImGui::EndDisabled();
+		ImGui::EndDisabled();
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
 		ImGui::MenuItem(" Collision##ModelEditor", NULL, &Geometry->b_CollisionDetection);
 		TooltipOnHover("Collision detection on/off");
 
-		ImGui::MenuItem(" Controller##ModelEditor", NULL, &Player->b_ControllerMode);
-		TooltipOnHover("Controller input on/off");
+		ImGui::MenuItem(" Cam Switch##ModelEditor", NULL, &Geometry->b_SwitchDetection);
+		TooltipOnHover("Camera switch detection on/off");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::MenuItem(" Vertex Light##ModelRender", NULL, &b_PerVertexLighting)) { if (b_PerVertexLighting) { b_PerPixelLighting = false; } }
+		TooltipOnHover("Per-Vertex Lighting");
+
+		if (ImGui::MenuItem(" Pixel Light##ModelRender", NULL, &b_PerPixelLighting)) { if (b_PerPixelLighting) { b_PerVertexLighting = false; } }
+		TooltipOnHover("Per-Pixel Lighting");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 		if (ImGui::BeginTable("Transform##PlayerRightPanel", 4))
 		{
