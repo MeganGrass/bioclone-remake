@@ -161,6 +161,9 @@
     <Filter Include="Standard\XInput">
       <UniqueIdentifier>{87fca43d-2751-4e8f-adcc-ddec14d57a92}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BioHazard\Common\Animation">
+      <UniqueIdentifier>{9e1952c7-74d9-4e75-8b4c-d6bddbb749cd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\mstd-lib\std_basic_fstream.cpp">
@@ -532,11 +535,17 @@
     <ClCompile Include="..\..\mstd-lib\XInput\std_xinput.cpp">
       <Filter>Standard\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="Source\app_controller.cpp">
+    <ClCompile Include="Source\app_controller_bio2.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp">
       <Filter>BioHazard\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_controller_bio1.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_controller_bio2nov96.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -893,6 +902,21 @@
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h">
       <Filter>BioHazard\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio2_anim_state.h">
+      <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_state_machine.h">
+      <Filter>BioHazard\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio1_anim_state.h">
+      <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio2_anim_state_nov96.h">
+      <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio3_anim_state.h">
+      <Filter>BioHazard\Common\Animation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

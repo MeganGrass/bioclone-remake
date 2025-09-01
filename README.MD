@@ -1,20 +1,23 @@
 # BioClone Remake
-Multi-purpose utility application for classic Resident Evil video games for Sony PlayStation (PSX/PS1/PSone) and PC
+Multi-purpose utility application for classic Resident Evil video games for Sony PlayStation (PSX/PS1/PSone) and PC counterparts
+- Model Viewer (Resident Evil, Resident Evil 2, Resident Evil 3)
+- Room Testing (Resident Evil 2)
+- Gameplay Testing (via controller input)
+
+## Notice
+- This is an extremely early, open-source test version rewrite of "BioClone Redux"
+- Do not expect modification abilities of "BioClone Redux," yet...
 
 ## Supported File Formats
 - RDT (Resident Evil 2 only, for now)
 - TMD, MD1, MD2, EMD, EMW, PLD and PLW model data
 - TIM, BMP, PNG and JPG model texture
 
-## Notice
-- This is an extremely early, open-source test version rewrite of "BioClone Redux"
-- Do not expect modification abilities of that app, yet...
-
-## Basics (Preliminary)
+## Basics
 ##### **Prerendered Backgrounds**
 - Must be either TIM or PNG with naming convention: ROOMXYYZZ (example: ROOM20B10.PNG)
 ##### **Camera Sprite Masks**
-- Must be either TIM or PNG with naming convention: ROOM_XYY_ZZ (example: ROOM_20B_10_MASK.PNG)
+- Must be either TIM or PNG with naming convention: ROOM_XYY_ZZ_MASK (example: ROOM_20B_10_MASK.PNG)
 
 Background and Mask images must be located in same directory as RDT
 
@@ -30,8 +33,10 @@ Background and Mask images must be located in same directory as RDT
 | `ESC` | Exit Application |
 
 ## Controller
-- Preliminary support of animation state change ("playing") for Bio2 only
-- Model (PLD) and Weapon (PLW) both must be open
+- Support provided via XInput
+- Setup via main menu (View -> Controller Map)
+- Gameplay testing for Resident Evil and Resident Evil 2 (final retail and Nov '96 prototype) models
+- Character (PLD) and Weapon (PLW) both must be open
 
 ## Images
 ![Preliminary Test](/images/preliminary_test.jpg?raw=true "Preliminary Test")

@@ -90,8 +90,12 @@ private:
 	float m_RoomcutProgress;
 
 	std::atomic<bool> b_ControllerMapping;
-
 	std::unique_ptr<Resident_Evil_Gamepad> Gamepad;
+
+	std::filesystem::path m_BootPlayerFilename;
+	std::filesystem::path m_BootWeaponFilename;
+	std::shared_ptr<Resident_Evil_Model> Player;
+	std::unique_ptr<StateMachineVariant> m_PlayerState;
 
 	std::unique_ptr<Resident_Evil> Bio1;
 	std::unique_ptr<Resident_Evil_2_Nov96> Bio2Nov96;
@@ -101,10 +105,6 @@ private:
 	std::unique_ptr<Capcom_Disk> Exe;
 
 	std::shared_ptr<Resident_Evil_Animation> Rbj;
-
-	std::unique_ptr<Resident_Evil_Model> Player;
-	std::filesystem::path m_BootPlayerFilename;
-	std::filesystem::path m_BootWeaponFilename;
 
 	std::unique_ptr<ImGuiContext, decltype(&ImGui::DestroyContext)> Context;
 
@@ -121,6 +121,10 @@ private:
 	void DrawHorizontalLine(float HorizontalIndent, float VerticalIndent, float Thickness, float Red, float Green, float Blue, float Alpha = 1.0f);
 	void DrawVerticalLine(float HorizontalIndent, float VerticalIndent, float Thickness, float Red, float Green, float Blue, float Alpha = 1.0f);
 
+	void RoomcutExtract(std::filesystem::path Filename);
+	void RoomcutModal(void);
+	void OnRoomcutComplete(std::filesystem::path Directory);
+
 	bool IsRoomOpen(void);
 	void CloseRDT(void);
 	void OpenRDT(void);
@@ -131,15 +135,15 @@ private:
 	void SavePlayerTexture(void);
 	void Screenshot(void);
 
-	void RoomcutExtract(std::filesystem::path Filename);
-	void RoomcutModal(void);
-	void OnRoomcutComplete(std::filesystem::path Directory);
-
 	void CollisionEditor(void);
 	void ModelEditor(void);
 
-	void ControllerMapping(void);
-	void ControllerInput(std::unique_ptr<Resident_Evil_Model>& Model);
+	void InitPlayerStateBio1(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void ControllerInputBio1(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void InitPlayerStateBio2Nov96(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void ControllerInputBio2Nov96(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void InitPlayerStateBio2(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void ControllerInputBio2(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
 
 	void DrawBackground(void);
 	void DrawCamera(void);
@@ -155,6 +159,7 @@ private:
 
 	void MainMenu(void);
 	void Options(void);
+	void ControllerMapping(void);
 	void RenderWindow(void);
 	void LeftPanel(ImVec2 Position, ImVec2 Size);
 	void CenterPanel(ImVec2 Position, ImVec2 Size);
@@ -164,6 +169,7 @@ private:
 	void RenderScene(void);
 	void Draw(void);
 	void Input(void);
+	void SetController(bool b_OnOff);
 	void InitRender(uint32_t Width, uint32_t Height);
 	void InitGame(void);
 	void InitImGuiColor(void);
@@ -206,7 +212,7 @@ public:
 		Bio3{ std::make_unique<Resident_Evil_3>() },
 		Cdx{ std::make_unique<CDX_File_Container>() },
 		Exe{ std::make_unique<Capcom_Disk>() },
-		Player{ std::make_unique<Resident_Evil_Model>() },
+		Player{ std::make_shared<Resident_Evil_Model>() },
 		m_ConfigStr(),
 		m_BorderColor{},
 		m_CaptionColor{},

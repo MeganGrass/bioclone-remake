@@ -279,6 +279,50 @@ void Global_Application::Input(void)
 	}
 }
 
+void Global_Application::SetController(bool b_OnOff)
+{
+	Player->b_ControllerMode = b_OnOff;
+
+	if (!Player->b_ControllerMode)
+	{
+		Player->Controller = [&]() {};
+		return;
+	}
+
+	Player->b_Play.store(true);
+	Player->b_LockPosition = true;
+	Player->b_DrawReference = false;
+
+	if (Player->ModelGame() & (AUG95 | OCT95 | BIO1) && Player->WeaponModelGame() & (AUG95 | OCT95 | BIO1))
+	{
+		InitPlayerStateBio1(Player, m_PlayerState);
+	}
+	else if (Player->ModelGame() & BIO2NOV96 && Player->WeaponModelGame() & BIO2NOV96)
+	{
+		InitPlayerStateBio2Nov96(Player, m_PlayerState);
+	}
+	else if (Player->ModelGame() & (BIO2TRIAL | BIO2) && Player->WeaponModelGame() & (BIO2TRIAL | BIO2))
+	{
+		InitPlayerStateBio2(Player, m_PlayerState);
+	}
+
+	Player->Controller = [this]() -> void
+		{
+			if (Player->ModelGame() & (AUG95 | OCT95 | BIO1) && Player->WeaponModelGame() & (AUG95 | OCT95 | BIO1))
+			{
+				ControllerInputBio1(m_PlayerState);
+			}
+			else if (Player->ModelGame() & BIO2NOV96 && Player->WeaponModelGame() & BIO2NOV96)
+			{
+				ControllerInputBio2Nov96(m_PlayerState);
+			}
+			else if (Player->ModelGame() & (BIO2TRIAL | BIO2) && Player->WeaponModelGame() & (BIO2TRIAL | BIO2))
+			{
+				ControllerInputBio2(m_PlayerState);
+			}
+		};
+}
+
 void Global_Application::DragAndDrop(StrVecW Files) const
 {
 	/*for (std::size_t i = 0; i < Files.size(); i++)
@@ -487,12 +531,11 @@ void Global_Application::InitGame(void)
 		Player->Hitbox().h = -1530;
 		Player->Hitbox().d = 450;
 
+		Player->iHealth = Player->iHealthMax = 200;
+
 		Player->Routine = [this]() -> void
 			{
-				if (Player->ModelGame() & BIO2 && Player->WeaponModelGame() & BIO2)
-				{
-					ControllerInput(Player);
-				}
+				Player->Controller();
 
 				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
 
@@ -514,18 +557,14 @@ void Global_Application::InitGame(void)
 			Player->Open(m_BootPlayerFilename);
 		}
 
-		if (Standard_FileSystem().Exists(m_BootWeaponFilename) && Player->ModelDX9() && Player->Open(m_BootWeaponFilename) && !Player->Animation(AnimationIndex::Weapon)->Clip.empty())
+		if (Standard_FileSystem().Exists(m_BootWeaponFilename) && Player->ModelDX9())
 		{
-			Player->AnimIndex(AnimationIndex::Weapon);
-			Player->iClip.store(2);
+			Player->Open(m_BootWeaponFilename);
 		}
 
-		if (Player->ModelGame() & BIO2 && Player->WeaponModelGame() & BIO2 && Player->ModelDX9() && Player->WeaponModelDX9() && !Player->Animation(AnimationIndex::Weapon)->Clip.empty())	// temp ModelGame check
+		if (Player->ModelDX9() && Player->WeaponModelDX9())
 		{
-			Player->b_Play.store(true);
-			Player->b_Loop.store(true);
-			Player->b_LockPosition = true;
-			Player->b_ControllerMode = true;
+			SetController(true);
 		}
 	}
 }
