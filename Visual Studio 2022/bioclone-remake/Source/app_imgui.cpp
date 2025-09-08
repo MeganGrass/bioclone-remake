@@ -439,10 +439,10 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 
 	ImGui::Begin("Window##LeftPanel", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
 
-	ImGui::Text(" Stage: %X", Stage);
-	ImGui::Text(" Room: %02X", Room);
-	ImGui::Text(" Disk: %d", Disk);
-	ImGui::Text(" Cut: %d / %d", Camera->Cut, Camera->CutMax ? Camera->CutMax - 1 : 0);
+	ImGui::Text(" Stage: %X", Room->m_Stage);
+	ImGui::Text(" Room: %02X", Room->m_Room);
+	ImGui::Text(" Disk: %d", Room->m_Disk);
+	ImGui::Text(" Cut: %d / %d", Camera->m_Cut, Camera->m_CutMax ? Camera->m_CutMax - 1 : 0);
 
 	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
@@ -564,6 +564,41 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 		ModelEditor();
 		ImGui::End();
 		return;
+	}
+
+	if (ImGui::CollapsingHeader("Type##RightPanel", ImGuiTreeNodeFlags_None))
+	{
+		bool b_Bio1Alpha = Room->GameType() & (AUG95 | OCT95);
+		bool b_Bio1 = Room->GameType() & (BIO1);
+		bool b_Bio2Nov96 = Room->GameType() & (BIO2NOV96);
+		bool b_Bio2 = Room->GameType() & (BIO2);
+		bool b_Bio3 = Room->GameType() & (BIO3);
+
+		if (ImGui::BeginTable("Table##RoomType", 2))
+		{
+			TooltipOnHover("Room Game Type on Open/Save");
+			ImGui::TableNextColumn();
+
+			ImGui::BeginDisabled(true);
+			if (ImGui::Checkbox(" Bio1 Alpha##RoomType", &b_Bio1Alpha)) { Room->SetGame(Video_Game::Resident_Evil_Aug_4_1995); }
+			TooltipOnHover("Resident Evil (Aug/Oct 1995) Prototype");
+			ImGui::EndDisabled();
+			ImGui::TableNextColumn();
+			ImGui::TableNextColumn();
+			if (ImGui::Checkbox(" Bio1##RoomType", &b_Bio1)) { Room->SetGame(Video_Game::Resident_Evil); }
+			TooltipOnHover("Resident Evil");
+			if (ImGui::Checkbox(" Bio2 Nov '96##RoomType", &b_Bio2Nov96)) { Room->SetGame(Video_Game::Resident_Evil_2_Nov_6_1996); }
+			TooltipOnHover("Resident Evil 2 (Nov 1996) Prototype");
+			if (ImGui::Checkbox(" Bio2##RoomType", &b_Bio2)) { Room->SetGame(Video_Game::Resident_Evil_2); }
+			TooltipOnHover("Resident Evil 2");
+
+			ImGui::BeginDisabled(true);
+			if (ImGui::Checkbox(" Bio3##RoomType", &b_Bio3)) { Room->SetGame(Video_Game::Resident_Evil_3); }
+			TooltipOnHover("Resident Evil 3");
+			ImGui::EndDisabled();
+
+			ImGui::EndTable();
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Collision##RightPanel", ImGuiTreeNodeFlags_None))

@@ -164,6 +164,36 @@
     <Filter Include="BioHazard\Common\Animation">
       <UniqueIdentifier>{9e1952c7-74d9-4e75-8b4c-d6bddbb749cd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BioHazard\Bio1\LIT">
+      <UniqueIdentifier>{c214810d-ad8c-4838-a6f5-fceb3ad98b41}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\RDT">
+      <UniqueIdentifier>{83a601b5-9fd0-4cf0-b461-e14ff3ab44d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\RID">
+      <UniqueIdentifier>{43cdb89a-e441-404c-94f0-fa4169fb88c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\RVD">
+      <UniqueIdentifier>{dc96fa75-37ed-46f9-96f6-4da8fad872ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\SCA">
+      <UniqueIdentifier>{5ca4a4ca-767c-42ab-ab46-92a35cbf930b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\BLK">
+      <UniqueIdentifier>{6086e319-bdbf-4a73-95c8-1f09fb803f42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\FLR">
+      <UniqueIdentifier>{132ebfca-23d3-4c17-b77b-64a0b4d43e64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio3\RDT">
+      <UniqueIdentifier>{67e4a5ea-3d87-483f-a367-21ab45e34cae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1.5\SCA">
+      <UniqueIdentifier>{f803c143-b628-48c6-82c3-36180ff05b72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1.5\RDT">
+      <UniqueIdentifier>{5ef6777d-3a90-4bf5-9d32-1c7ddcce5726}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\mstd-lib\std_basic_fstream.cpp">
@@ -547,6 +577,9 @@
     <ClCompile Include="Source\app_controller_bio2nov96.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp">
+      <Filter>BioHazard\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Windows\resource.h">
@@ -723,13 +756,7 @@
     <ClInclude Include="..\..\bio-lib\Bio2\RID\bio2_rid.h">
       <Filter>BioHazard\Bio2\RID</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header_trial.h">
-      <Filter>BioHazard\Bio2\RDT</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt.h">
-      <Filter>BioHazard\Bio2\RDT</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header.h">
       <Filter>BioHazard\Bio2\RDT</Filter>
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2\PRI\bio2_pri.h">
@@ -894,9 +921,6 @@
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h">
       <Filter>BioHazard\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header_nov96.h">
-      <Filter>BioHazard\Bio2\RDT</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\mstd-lib\XInput\std_xinput.h">
       <Filter>Standard\XInput</Filter>
     </ClInclude>
@@ -917,6 +941,39 @@
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Common\animation\bio3_anim_state.h">
       <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_room.h">
+      <Filter>BioHazard\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\LIT\bio1_lit.h">
+      <Filter>BioHazard\Bio1\LIT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\RDT\bio1_rdt.h">
+      <Filter>BioHazard\Bio1\RDT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\RID\bio1_rid.h">
+      <Filter>BioHazard\Bio1\RID</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\SCA\bio1_sca.h">
+      <Filter>BioHazard\Bio1\SCA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\RVD\bio1_rvd.h">
+      <Filter>BioHazard\Bio1\RVD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\BLK\bio1_blk.h">
+      <Filter>BioHazard\Bio1\BLK</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\FLR\bio1_flr.h">
+      <Filter>BioHazard\Bio1\FLR</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio3\RDT\bio3_rdt.h">
+      <Filter>BioHazard\Bio3\RDT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio2_Nov96\SCA\bio2_nov96_sca.h">
+      <Filter>BioHazard\Bio1.5\SCA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio2_Nov96\RDT\bio2_nov96_rdt.h">
+      <Filter>BioHazard\Bio1.5\RDT</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

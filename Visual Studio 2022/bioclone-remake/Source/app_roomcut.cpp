@@ -7,6 +7,8 @@
 
 #include "app.h"
 
+#include <bio2.h>
+
 void Global_Application::RoomcutExtract(std::filesystem::path Filename)
 {
 	auto This = std::shared_ptr<Global_Application>(this, [](Global_Application*) {});
@@ -30,7 +32,7 @@ void Global_Application::RoomcutExtract(std::filesystem::path Filename)
 					This->OnRoomcutComplete(Directory);
 				};
 
-			This->Bio2->DisassembleRoomCut(Filename, Callback, OnSearchComplete);
+			Resident_Evil_2().DisassembleRoomCut(Filename, Callback, OnSearchComplete);
 		});
 
 	Modal = [This]() -> void { This->RoomcutModal(); };

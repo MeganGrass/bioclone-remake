@@ -1,7 +1,7 @@
 # BioClone Remake
 Multi-purpose utility application for classic Resident Evil video games for Sony PlayStation (PSX/PS1/PSone) and PC counterparts
 - Model Viewer (Resident Evil, Resident Evil 2, Resident Evil 3)
-- Room Testing (Resident Evil 2)
+- Room Testing (Resident Evil, Resident Evil 2 (Nov '96 Proto), Resident Evil 2)
 - Gameplay Testing (via controller input)
 
 ## Notice
@@ -9,7 +9,7 @@ Multi-purpose utility application for classic Resident Evil video games for Sony
 - Do not expect modification abilities of "BioClone Redux," yet...
 
 ## Supported File Formats
-- RDT (Resident Evil 2 only, for now)
+- RDT (Resident Evil, Resident Evil 2 (Nov '96 Proto), Resident Evil 2)
 - TMD, MD1, MD2, EMD, EMW, PLD and PLW model data
 - TIM, BMP, PNG and JPG model texture
 

@@ -65,6 +65,7 @@
     <ClCompile Include="..\..\bio-lib\Common\bio_geometry.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_animation.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_model.cpp" />
+    <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp" />
     <ClCompile Include="..\..\bio-lib\Disc\bio_disk.cpp" />
     <ClCompile Include="..\..\mstd-lib\DX9\std_dx9.cpp" />
     <ClCompile Include="..\..\mstd-lib\Geometry\std_matrix.cpp" />
@@ -157,8 +158,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\bio-lib\Bio1\bio1.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\BLK\bio1_blk.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\CLUT\bio1_clut.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\FLR\bio1_flr.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\LIT\bio1_lit.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\PAK\bio1_pak.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\RDT\bio1_rdt.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\RID\bio1_rid.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\RVD\bio1_rvd.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\SCA\bio1_sca.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\ADT\bio2_adt.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\BGM\bio2_bgm.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\bio2.h" />
@@ -177,9 +185,6 @@
     <ClInclude Include="..\..\bio-lib\Bio2\PDEMO\bio2_pdemo.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\PRI\bio2_pri.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt.h" />
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header.h" />
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header_nov96.h" />
-    <ClInclude Include="..\..\bio-lib\Bio2\RDT\bio2_rdt_header_trial.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\RID\bio2_rid.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\RVD\bio2_rvd.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\SCA\bio2_sca.h" />
@@ -189,9 +194,12 @@
     <ClInclude Include="..\..\bio-lib\Bio2\SLD\bio2_sld.h" />
     <ClInclude Include="..\..\bio-lib\Bio2_Nov96\bio2_nov96.h" />
     <ClInclude Include="..\..\bio-lib\Bio2_Nov96\CLUT\bio2_nov96_clut.h" />
+    <ClInclude Include="..\..\bio-lib\Bio2_Nov96\RDT\bio2_nov96_rdt.h" />
+    <ClInclude Include="..\..\bio-lib\Bio2_Nov96\SCA\bio2_nov96_sca.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\BGM\sound.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\bio3.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\MD2\bio3_md2.h" />
+    <ClInclude Include="..\..\bio-lib\Bio3\RDT\bio3_rdt.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\SLD\bio3_sld.h" />
     <ClInclude Include="..\..\bio-lib\CDX\bio_cdx.h" />
     <ClInclude Include="..\..\bio-lib\CDX\lzo.h" />
@@ -205,6 +213,7 @@
     <ClInclude Include="..\..\bio-lib\Common\bio_geometry.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_model.h" />
+    <ClInclude Include="..\..\bio-lib\Common\bio_room.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_state_machine.h" />
     <ClInclude Include="..\..\bio-lib\Disc\bio_disk.h" />
     <ClInclude Include="..\..\mstd-lib\DX9\std_dx9.h" />

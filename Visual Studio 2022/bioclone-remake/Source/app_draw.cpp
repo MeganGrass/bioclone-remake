@@ -92,54 +92,51 @@ void Global_Application::DrawSprite(void)
 		Render->AlphaTesting(TRUE, 0xFF, D3DCMP_GREATEREQUAL);
 	}
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Pri[Camera->m_Cut]->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Pri[Camera->Cut]->Count(); i++)
+		for (std::size_t x = 0; x < Room->Pri[Camera->m_Cut]->Get(i)->Sprite.size(); x++)
 		{
-			for (std::size_t x = 0; x < Bio2->Rdt->Pri[Camera->Cut]->Get(i)->Sprite.size(); x++)
-			{
-				auto& Sprite = Bio2->Rdt->Pri[Camera->Cut]->Get(i)->Sprite[x];
-				auto& Layer = Bio2->Rdt->Pri[Camera->Cut]->Get(i)->Layer;
+			auto& Sprite = Room->Pri[Camera->m_Cut]->Get(i)->Sprite[x];
+			auto& Group = Room->Pri[Camera->m_Cut]->Get(i)->Group;
 
-				float X = ((float)Sprite.x + (float)Layer.OfsX) * Camera->m_OrthoScaleX;
-				float Y = ((float)Sprite.y + (float)Layer.OfsY) * Camera->m_OrthoScaleY;
-				float W = (float)Sprite.w * Camera->m_OrthoScaleX;
-				float H = (float)Sprite.h * Camera->m_OrthoScaleY;
+			float X = ((float)Sprite.x + (float)Group.OfsX) * Camera->m_OrthoScaleX;
+			float Y = ((float)Sprite.y + (float)Group.OfsY) * Camera->m_OrthoScaleY;
+			float W = (float)Sprite.w * Camera->m_OrthoScaleX;
+			float H = (float)Sprite.h * Camera->m_OrthoScaleY;
 
 #if MSTD_DX9
-				X -= 0.5f;
-				Y += 0.5f;
+			X -= 0.5f;
+			Y += 0.5f;
 
-				float OffsetU = 0.5f / Camera->m_TexSprWidth;
-				float OffsetV = 0.5f / Camera->m_TexSprHeight;
+			float OffsetU = 0.5f / Camera->m_TexSprWidth;
+			float OffsetV = 0.5f / Camera->m_TexSprHeight;
 #else
-				float OffsetU = 0.0f;
-				float OffsetV = 0.0f;
+			float OffsetU = 0.0f;
+			float OffsetV = 0.0f;
 #endif
 
-				float U0 = ((float)Sprite.u + OffsetU) / Camera->m_TexSprWidth;
-				float V0 = ((float)Sprite.v + OffsetV) / Camera->m_TexSprHeight;
-				float U1 = ((float)Sprite.u + (float)Sprite.w - OffsetU) / Camera->m_TexSprWidth;
-				float V1 = ((float)Sprite.v + (float)Sprite.h - OffsetV) / Camera->m_TexSprHeight;
+			float U0 = ((float)Sprite.u + OffsetU) / Camera->m_TexSprWidth;
+			float V0 = ((float)Sprite.v + OffsetV) / Camera->m_TexSprHeight;
+			float U1 = ((float)Sprite.u + (float)Sprite.w - OffsetU) / Camera->m_TexSprWidth;
+			float V1 = ((float)Sprite.v + (float)Sprite.h - OffsetV) / Camera->m_TexSprHeight;
 
-				float Z = (float)Sprite.otz;
+			float Z = (float)Sprite.otz;
 
-				std::vector<vec4t> Vector = {
-					{ vec4{ X,		Y + H,	Z, 1.0f }, vec2{ U0, V1 } },
-					{ vec4{ X,		Y,		Z, 1.0f }, vec2{ U0, V0 } },
-					{ vec4{ X + W,	Y + H,	Z, 1.0f }, vec2{ U1, V1 } },
-					{ vec4{ X + W,	Y,		Z, 1.0f }, vec2{ U1, V0 } } };
+			std::vector<vec4t> Vector = {
+				{ vec4{ X,		Y + H,	Z, 1.0f }, vec2{ U0, V1 } },
+				{ vec4{ X,		Y,		Z, 1.0f }, vec2{ U0, V0 } },
+				{ vec4{ X + W,	Y + H,	Z, 1.0f }, vec2{ U1, V1 } },
+				{ vec4{ X + W,	Y,		Z, 1.0f }, vec2{ U1, V0 } } };
 
 #if MSTD_DX9
-				std::unique_ptr<IDirect3DVertexBuffer9, IDirect3DDelete9<IDirect3DVertexBuffer9>> Vertices;
-				Vertices.reset(Render->CreateVec4t(Vector));
+			std::unique_ptr<IDirect3DVertexBuffer9, IDirect3DDelete9<IDirect3DVertexBuffer9>> Vertices;
+			Vertices.reset(Render->CreateVec4t(Vector));
 
-				Render->DrawVec4t(
-					Vertices.get(), Camera->m_Sprite.get(), Render->PassthroughPixelShader.get(),
-					Camera->m_TexSprWidth, Camera->m_TexSprHeight,
-					(D3DXMATRIX*)Camera->Orthogonal.get());
+			Render->DrawVec4t(
+				Vertices.get(), Camera->m_Sprite.get(), Render->PassthroughPixelShader.get(),
+				Camera->m_TexSprWidth, Camera->m_TexSprHeight,
+				(D3DXMATRIX*)Camera->Orthogonal.get());
 #endif
-			}
 		}
 	}
 
@@ -156,14 +153,11 @@ void Global_Application::DrawSwitch(void)
 {
 	if (!Camera->b_DrawSwitch || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Rvd->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Rvd->Count(); i++)
+		if (Room->Rvd->Get(i)->Fcut == Camera->m_Cut)
 		{
-			if (Bio2->Rdt->Rvd->Get(i)->Fcut == Camera->Cut)
-			{
-				Geometry->Draw4p(Bio2->Rdt->Rvd->Get(i)->Xz, 0, D3DCOLOR_ARGB(255, 0, 197, 0));
-			}
+			Geometry->Draw4p(Room->Rvd->Get(i)->Xz, 0, D3DCOLOR_ARGB(255, 0, 197, 0));
 		}
 	}
 }
@@ -172,50 +166,47 @@ void Global_Application::DrawCollision(void)
 {
 	if (!Geometry->b_DrawCollision || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Sca->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Sca->Count(); i++)
+		SHAPEVECTOR Vec = Room->Sca->GetShapeVector(i);
+
+		bool b_Shape = Geometry->b_ShapeCollision ? (Geometry->iObject == i) ? true : Geometry->b_ShapeCollisionAll : Geometry->b_ShapeCollisionAll;
+
+		bool b_Solid = Geometry->b_SolidCollision ? (Geometry->iObject == i) ? true : Geometry->b_SolidCollisionAll : Geometry->b_SolidCollisionAll;
+
+		DWORD Color = Geometry->b_HighlightCollision ? (Geometry->iObject == i) ? 0x00FF0000 : 0x00C5C5C5 : 0x00C5C5C5;
+
+		if (!b_Shape) { Vec.h = Vec.y; }
+
+		switch (Room->Sca->Get(i)->Id.Bits.Shape)
 		{
-			SHAPEVECTOR Vec = Bio2->Rdt->Sca->GetShapeVector(i);
-
-			bool b_Shape = Geometry->b_ShapeCollision ? (Geometry->iObject == i) ? true : Geometry->b_ShapeCollisionAll : Geometry->b_ShapeCollisionAll;
-
-			bool b_Solid = Geometry->b_SolidCollision ? (Geometry->iObject == i) ? true : Geometry->b_SolidCollisionAll : Geometry->b_SolidCollisionAll;
-
-			DWORD Color = Geometry->b_HighlightCollision ? (Geometry->iObject == i) ? 0x00FF0000 : 0x00C5C5C5 : 0x00C5C5C5;
-
-			if (!b_Shape) { Vec.h = Vec.y; }
-
-			switch (Bio2->Rdt->Sca->Get(i)->Id.Bits.Shape)
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->DrawBox(Vec, {}, Color, b_Solid); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_A); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_B); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_C); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_D); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->DrawRhombus(Vec, {}, Color, b_Solid); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle):
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x):
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_z): Geometry->DrawCylinder(Vec, {}, Color, b_Solid); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Slope):
+			switch (Room->Sca->GetSlopeHypotenuse(i))
 			{
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->DrawBox(Vec, {}, Color, b_Solid); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_A); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_B); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_C); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->DrawDiagonal(Vec, {}, Color, b_Solid, Shape_Type::Diagonal_D); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->DrawRhombus(Vec, {}, Color, b_Solid); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle):
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x):
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_z): Geometry->DrawCylinder(Vec, {}, Color, b_Solid); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Slope):
-				switch (Bio2->Rdt->Sca->GetSlopeHypotenuse(i))
-				{
-				case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_A); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_B); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_C); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_D); break;
-				}
-				break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box_3):
-				switch (Bio2->Rdt->Sca->GetSlopeHypotenuse(i))
-				{
-				case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_A); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_B); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_C); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_D); break;
-				}
-				break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_A); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_B); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_C); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_D); break;
 			}
+			break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Box_3):
+			switch (Room->Sca->GetSlopeHypotenuse(i))
+			{
+			case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_A); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_B); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_C); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->DrawTriangle(Vec, {}, Color, b_Solid, Shape_Type::Slope_D); break;
+			}
+			break;
 		}
 	}
 }
@@ -224,15 +215,12 @@ void Global_Application::DrawBlock(void)
 {
 	if (!Geometry->b_DrawBlock || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Blk->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Blk->Count(); i++)
-		{
-			std::int16_t WW = Bio2->Rdt->Blk->Get(i)->Size_x - Bio2->Rdt->Blk->Get(i)->Pos_x;
-			std::int16_t DD = Bio2->Rdt->Blk->Get(i)->Size_z - Bio2->Rdt->Blk->Get(i)->Pos_z;
+		std::int16_t WW = Room->Blk->Get(i)->Size_x - Room->Blk->Get(i)->Pos_x;
+		std::int16_t DD = Room->Blk->Get(i)->Size_z - Room->Blk->Get(i)->Pos_z;
 
-			Geometry->DrawBox({ Bio2->Rdt->Blk->Get(i)->Pos_x, 0, Bio2->Rdt->Blk->Get(i)->Pos_z, WW, 0, DD }, { }, 0x00FFFF00, false);
-		}
+		Geometry->DrawBox({ Room->Blk->Get(i)->Pos_x, 0, Room->Blk->Get(i)->Pos_z, WW, 0, DD }, { }, 0x00FFFF00, false);
 	}
 }
 
@@ -240,17 +228,14 @@ void Global_Application::DrawFloor(void)
 {
 	if (!Geometry->b_DrawFloor || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Flr->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Flr->Count(); i++)
-		{
-			std::int16_t XX = Bio2->Rdt->Flr->Get(i)->X;
-			std::int16_t ZZ = Bio2->Rdt->Flr->Get(i)->Z;
-			std::uint16_t WW = Bio2->Rdt->Flr->Get(i)->W;
-			std::uint16_t DD = Bio2->Rdt->Flr->Get(i)->D;
+		std::int16_t XX = Room->Flr->Get(i)->X;
+		std::int16_t ZZ = Room->Flr->Get(i)->Z;
+		std::uint16_t WW = Room->Flr->Get(i)->W;
+		std::uint16_t DD = Room->Flr->Get(i)->D;
 
-			Geometry->DrawBox({ XX, 0, ZZ, WW, 0, DD }, { }, 0x0000FFFF, false);
-		}
+		Geometry->DrawBox({ XX, 0, ZZ, WW, 0, DD }, { }, 0x0000FFFF, false);
 	}
 }
 
@@ -279,22 +264,19 @@ void Global_Application::SetLighting(void)
 {
 	if (!IsRoomOpen()) { ResetLighting(); return; }
 
-	uint8_t Cut = Camera->Cut;
+	uintmax_t Cut = Camera->m_Cut;
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	Render->SetPSXLightMag(Room->Lit->Get(Cut)->Mag);
+
+	Render->SetPSXLightAmbient({ (float)Room->Lit->Get(Cut)->Ambient.r, (float)Room->Lit->Get(Cut)->Ambient.g, (float)Room->Lit->Get(Cut)->Ambient.b });
+
+	for (std::size_t i = 0; i < 3; i++)
 	{
-		Render->SetPSXLightMag(Bio2->Rdt->Lit->Get(Cut)->Mag);
-
-		Render->SetPSXLightAmbient({ (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.r, (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.g, (float)Bio2->Rdt->Lit->Get(Cut)->Ambient.b });
-
-		for (std::size_t i = 0; i < 3; i++)
-		{
-			Render->SetPSXLight(i,
-				Bio2->Rdt->Lit->Get(Cut)->Mode[i],
-				{ (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].r, (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].g, (float)Bio2->Rdt->Lit->Get(Cut)->Col[i].b },
-				{ (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].x, (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].y, (float)Bio2->Rdt->Lit->Get(Cut)->Pos[i].z },
-				Bio2->Rdt->Lit->Get(Cut)->L[i]);
-		}
+		Render->SetPSXLight(i,
+			Room->Lit->Get(Cut)->Mode[i],
+			{ (float)Room->Lit->Get(Cut)->Col[i].r, (float)Room->Lit->Get(Cut)->Col[i].g, (float)Room->Lit->Get(Cut)->Col[i].b },
+			{ (float)Room->Lit->Get(Cut)->Pos[i].x, (float)Room->Lit->Get(Cut)->Pos[i].y, (float)Room->Lit->Get(Cut)->Pos[i].z },
+			Room->Lit->Get(Cut)->L[i]);
 	}
 
 	Render->UpdateLightConstants();
@@ -306,37 +288,34 @@ void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEV
 
 	if (Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	for (std::size_t i = 0; i < Room->Sca->Count(); i++)
 	{
-		for (std::size_t i = 0; i < Bio2->Rdt->Sca->Count(); i++)
-		{
-			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Object) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit7) { continue; }
-			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Player) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit8) { continue; }
-			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::SubPlayer) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit8) { continue; }
-			if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Enemy) && !Bio2->Rdt->Sca->Get(i)->Id.Bits.bit3) { continue; }
+		if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Object) && !Room->Sca->Get(i)->Id.Bits.bit7) { continue; }
+		if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Player) && !Room->Sca->Get(i)->Id.Bits.bit8) { continue; }
+		if (std::to_underlying(ModelType) & std::to_underlying(ModelType::SubPlayer) && !Room->Sca->Get(i)->Id.Bits.bit8) { continue; }
+		if (std::to_underlying(ModelType) & std::to_underlying(ModelType::Enemy) && !Room->Sca->Get(i)->Id.Bits.bit3) { continue; }
 
-			switch (Bio2->Rdt->Sca->Get(i)->Id.Bits.Shape)
+		switch (Room->Sca->Get(i)->Id.Bits.Shape)
+		{
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Rectangle); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Diagonal_A); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Diagonal_B); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Diagonal_C); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Diagonal_D); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Rhombus); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Circle); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::OblongX); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_z): Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::OblongZ); break;
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Slope):
+		case std::to_underlying(Resident_Evil_2_Collision_Shape::Box_3):
+			switch (Room->Sca->GetSlopeHypotenuse(i))
 			{
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Rectangle); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_a): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_A); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_b): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_B); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_c): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_C); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Naname_d): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Diagonal_D); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Hishi): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Rhombus); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Circle): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Circle); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_x): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::OblongX); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Koban_z): Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::OblongZ); break;
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Slope):
-			case std::to_underlying(Resident_Evil_2_Collision_Shape::Box_3):
-				switch (Bio2->Rdt->Sca->GetSlopeHypotenuse(i))
-				{
-				case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Slope_A); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Slope_B); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Slope_C); break;
-				case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->Collision(Position, Hitbox, Bio2->Rdt->Sca->GetShapeVector(i), Shape_Type::Slope_D); break;
-				}
-				break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_A: Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Slope_A); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_B: Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Slope_B); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_C: Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Slope_C); break;
+			case Resident_Evil_2_Slope_Hypotenuse::Type_D: Geometry->Collision(Position, Hitbox, Room->Sca->GetShapeVector(i), Shape_Type::Slope_D); break;
 			}
+			break;
 		}
 	}
 }
@@ -345,28 +324,30 @@ void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 {
 	if (!Geometry->b_SwitchDetection || !IsRoomOpen()) { return; }
 
-	if (GameType() & (BIO2NOV96 | BIO2TRIAL | BIO2))
+	auto& Data = Room->Rvd->data();
+
+	bool b_FirstInstance = false;
+
+	for (std::size_t i = 0; i < Data.size(); i++)
 	{
-		auto& Data = Bio2->Rdt->Rvd->data();
+		if (!Data[i].Be_flg || (Data[i].Fcut != Camera->m_Cut)) { continue; }
 
-		bool b_FirstInstance = false;
+		if (Data[i].Tcut == 0 && !b_FirstInstance) { b_FirstInstance = true; continue; }
 
-		for (std::size_t i = 0; i < Data.size(); i++)
+		if (Room->GameType() & (AUG95 | OCT95 | BIO1))
 		{
-			if (!Data[i].Be_flg || (Data[i].Fcut != Camera->Cut)) { continue; }
+			if (Data[i].Tcut == 9) { continue; }
+		}
 
-			if (Data[i].Tcut == 0 && !b_FirstInstance) { b_FirstInstance = true; continue; }
-
-			if (Data[i].Fcut == Camera->Cut)
+		if (Data[i].Fcut == Camera->m_Cut)
+		{
+			if (Geometry->CameraSwitch(Position, Data[i].Xz))
 			{
-				if (Geometry->CameraSwitch(Position, Data[i].Xz))
-				{
-					uint8_t Cut = Data[i].Tcut;
-					Camera->SetImage(Cut);
-					Camera->Set(Bio2->Rdt->Rid->Get(Cut)->ViewR >> 7, Bio2->Rdt->Rid->Get(Cut)->View_p, Bio2->Rdt->Rid->Get(Cut)->View_r);
-					SetLighting();
-					return;
-				}
+				uint8_t Cut = Data[i].Tcut;
+				Camera->SetImage(Cut);
+				Camera->Set(Room->Rid->Get(Cut)->ViewR >> 7, Room->Rid->Get(Cut)->View_p, Room->Rid->Get(Cut)->View_r);
+				SetLighting();
+				return;
 			}
 		}
 	}

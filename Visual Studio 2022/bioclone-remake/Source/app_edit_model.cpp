@@ -61,17 +61,19 @@ void Global_Application::ModelEditor(void)
 		bool b_Bio2 = Player->GameType() & (BIO2);
 		bool b_Bio3 = Player->GameType() & (BIO3);
 
-		bool b_Bio1Enemy = false;
-
 		if (ImGui::BeginTable("Table##ModelType", 2))
 		{
-			TooltipOnHover("Game Type on Open/Save");
+			TooltipOnHover("Model Game Type on Open/Save");
 			ImGui::TableNextColumn();
 			if (ImGui::Checkbox(" Bio1 Alpha##ModelType", &b_Bio1Alpha)) { Player->SetGame(Video_Game::Resident_Evil_Aug_4_1995); }
 			TooltipOnHover("Resident Evil (Aug/Oct 1995) Prototype");
 			ImGui::TableNextColumn();
-			if (ImGui::Checkbox(" Bio1 Enemy##ModelType", &b_Bio1Enemy)) {  }
+
+			ImGui::BeginDisabled(true);
+			if (ImGui::Checkbox(" Bio1 Enemy##ModelType", &Player->b_Bio1Enemy)) {  }
 			TooltipOnHover("Bio1 EMD is enemy type on Open\r\nAssume player type otherwise");
+			ImGui::EndDisabled();
+
 			ImGui::TableNextColumn();
 			if (ImGui::Checkbox(" Bio1##ModelType", &b_Bio1)) { Player->SetGame(Video_Game::Resident_Evil); }
 			TooltipOnHover("Resident Evil");
@@ -125,7 +127,7 @@ void Global_Application::ModelEditor(void)
 			if (ImGui::SliderScalar("##ModelAnimationIndex", ImGuiDataType_U64, &Player->iRoom, &Player->iRoomMin, &Player->iRoomMax))
 			{
 				Player->iRoom = std::clamp(Player->iRoom, (size_t)0, Player->iRoomMax);
-				Player->Animation(AnimationIndex::Room) = Bio2->Rdt->Rbj->Data[Player->iRoom];
+				Player->Animation(AnimationIndex::Room) = Room->Rbj->Data[Player->iRoom];
 			}
 			ScrollOnHover(&Player->iRoom, ImGuiDataType_U64, 1, Player->iRoomMin, Player->iRoomMax);
 			ImGui::EndDisabled();

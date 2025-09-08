@@ -283,6 +283,20 @@ void Global_Application::OpenConfig(void)
 				}
 			}
 
+			if (Standard_String().ToUpper(Args[0]) == L"M_ROOMGAMETYPE")
+			{
+				uint32_t Type = std::stoul(Args[1], nullptr, 16);
+				switch (Type)
+				{
+				case std::to_underlying(Video_Game::Resident_Evil_Aug_4_1995): Room->SetGame(Video_Game::Resident_Evil_Aug_4_1995); break;
+				case std::to_underlying(Video_Game::Resident_Evil_Oct_4_1995): Room->SetGame(Video_Game::Resident_Evil_Oct_4_1995); break;
+				case std::to_underlying(Video_Game::Resident_Evil): Room->SetGame(Video_Game::Resident_Evil); break;
+				case std::to_underlying(Video_Game::Resident_Evil_2_Nov_6_1996): Room->SetGame(Video_Game::Resident_Evil_2_Nov_6_1996); break;
+				case std::to_underlying(Video_Game::Resident_Evil_3): Room->SetGame(Video_Game::Resident_Evil_3); break;
+				default: Room->SetGame(Video_Game::Resident_Evil_2); break;
+				}
+			}
+
 			if (Standard_String().ToUpper(Args[0]) == L"B_MODELLERP")
 			{
 				Player->b_LerpKeyframes = std::stoi(Args[1]);
@@ -490,6 +504,8 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"m_ModelLerpValue\t%f\r", Player->m_LerpValue);
 	Text->AddLine(L"m_ModelFilename\t\"%ws\"\r", Player->Filename().wstring().c_str());
 	Text->AddLine(L"m_ModelWeaponFilename\t\"%ws\"\r", Player->WeaponFilename().wstring().c_str());
+
+	Text->AddLine(L"m_RoomGameType\t0x%x\r", Room->GameType());
 
 	Text->FlushUTF16();
 }

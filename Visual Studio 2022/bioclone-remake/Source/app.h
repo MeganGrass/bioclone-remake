@@ -11,29 +11,16 @@
 
 #include <std_window.h>
 
+#include <bio_gamepad.h>
+#include <bio_geometry.h>
+#include <bio_camera.h>
+#include <bio_room.h>
+
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <imgui_impl_dx9.h>
 #include <imgui_impl_win32.h>
 #include <imgui_stdlib.h>
-
-#include <bio_gamepad.h>
-
-#include <bio_geometry.h>
-
-#include <bio_camera.h>
-
-#include <bio1.h>
-
-#include <bio2.h>
-
-#include <bio2_nov96.h>
-
-#include <bio3.h>
-
-#include <bio_cdx.h>
-
-#include <bio_disk.h>
 
 typedef class Global_Application Global;
 
@@ -97,19 +84,19 @@ private:
 	std::shared_ptr<Resident_Evil_Model> Player;
 	std::unique_ptr<StateMachineVariant> m_PlayerState;
 
-	std::unique_ptr<Resident_Evil> Bio1;
-	std::unique_ptr<Resident_Evil_2_Nov96> Bio2Nov96;
-	std::unique_ptr<Resident_Evil_2> Bio2;
-	std::unique_ptr<Resident_Evil_3> Bio3;
-	std::unique_ptr<CDX_File_Container> Cdx;
-	std::unique_ptr<Capcom_Disk> Exe;
+	std::unique_ptr<Resident_Evil_Geometry> Geometry;
 
-	std::shared_ptr<Resident_Evil_Animation> Rbj;
+	std::unique_ptr<Resident_Evil_Camera> Camera;
+
+	std::shared_ptr<Resident_Evil_Room> Room;
+
+	std::shared_ptr<Sony_PlayStation_GTE> GTE;
 
 	std::unique_ptr<ImGuiContext, decltype(&ImGui::DestroyContext)> Context;
 
 	void InitConfig(void);
 	void OpenConfig(void);
+	void SaveConfig(void);
 	const std::filesystem::path GetConfigFilename(void) const { return Window->GetUserDocumentsDir() / VER_INTERNAL_NAME_STR / L"config.ini"; }
 	const std::filesystem::path GetImGuiConfigFilename(void) const { return Window->GetUserDocumentsDir() / VER_INTERNAL_NAME_STR / L"imgui.ini"; }
 
@@ -129,7 +116,6 @@ private:
 	void CloseRDT(void);
 	void OpenRDT(void);
 	void SaveRDT(void);
-	void SetRoomAnimations(void);
 	void OpenPlayerModel(std::filesystem::path Filename = L"");
 	void OpenPlayerTexture(std::filesystem::path Filename = L"");
 	void SavePlayerTexture(void);
@@ -165,6 +151,8 @@ private:
 	void CenterPanel(ImVec2 Position, ImVec2 Size);
 	void RightPanel(ImVec2 Position, ImVec2 Size);
 
+	void About(void) const;
+	void Controls(void) const;
 	void SetMaxRenderSize(uint32_t MaxWidth, uint32_t MaxHeight);
 	void RenderScene(void);
 	void Draw(void);
@@ -177,6 +165,7 @@ private:
 	void InitWin32(HINSTANCE hInstance);
 	void DragAndDrop(StrVecW Files) const;
 	void Commandline(StrVecW Args);
+	void Shutdown(void);
 
 	Global_Application(Global_Application&&) = delete;
 	Global_Application& operator = (Global_Application&&) = delete;
@@ -194,25 +183,14 @@ public:
 
 	std::shared_ptr<Standard_DirectX_9> Render;
 
-	std::shared_ptr<Sony_PlayStation_GTE> GTE;
-
-	std::unique_ptr<Resident_Evil_Camera> Camera;
-
-	std::unique_ptr<Resident_Evil_Geometry> Geometry;
-
 	Global_Application(void) :
 		Context(nullptr, &ImGui::DestroyContext),
-		Window(std::make_unique<Standard_Window>()),
-		Render(std::make_shared<Standard_DirectX_9>()),
+		Window{ std::make_unique<Standard_Window>() },
+		Render{ std::make_shared<Standard_DirectX_9>() },
 		GTE{ std::make_shared<Sony_PlayStation_GTE>() },
-		Gamepad(std::make_unique<Resident_Evil_Gamepad>()),
-		Bio1{ std::make_unique<Resident_Evil>() },
-		Bio2Nov96{ std::make_unique<Resident_Evil_2_Nov96>() },
-		Bio2{ std::make_unique<Resident_Evil_2>() },
-		Bio3{ std::make_unique<Resident_Evil_3>() },
-		Cdx{ std::make_unique<CDX_File_Container>() },
-		Exe{ std::make_unique<Capcom_Disk>() },
+		Gamepad{ std::make_unique<Resident_Evil_Gamepad>() },
 		Player{ std::make_shared<Resident_Evil_Model>() },
+		Room{ std::make_shared<Resident_Evil_Room>() },
 		m_ConfigStr(),
 		m_BorderColor{},
 		m_CaptionColor{},
@@ -253,20 +231,11 @@ public:
 	{
 		ThreadPool.InitPool(1);
 		FilePool.InitPool(1);
-		Game = Video_Game::Resident_Evil_2;
 		Camera = std::make_unique<Resident_Evil_Camera>(Render, GTE);
 		Geometry = std::make_unique<Resident_Evil_Geometry>(Render, GTE);
 		Modal = [&]() {};
 	}
 	~Global_Application(void) = default;
-
-	void About(void) const;
-
-	void Controls(void) const;
-
-	void Shutdown(void);
-
-	void SaveConfig(void);
 
 	int Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow);
 };

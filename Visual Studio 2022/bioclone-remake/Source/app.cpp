@@ -239,17 +239,11 @@ void Global_Application::Input(void)
 		}
 		else if (!Player->b_EditorMode)
 		{
-			switch (Game)
+			if (Room->IsOpen())
 			{
-			case Video_Game::Resident_Evil_2_Trial:
-			case Video_Game::Resident_Evil_2:
-				if (Bio2->Rdt->IsOpen())
-				{
-					uint8_t i = Camera->SetImage(--Camera->Cut);
-					Camera->Set(Bio2->Rdt->Rid->Get(i)->ViewR >> 7, Bio2->Rdt->Rid->Get(i)->View_p, Bio2->Rdt->Rid->Get(i)->View_r);
-					SetLighting();
-				}
-				break;
+				uintmax_t i = Camera->SetImage(--Camera->m_Cut);
+				Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+				SetLighting();
 			}
 		}
 	}
@@ -263,17 +257,11 @@ void Global_Application::Input(void)
 		}
 		else if (!Player->b_EditorMode)
 		{
-			switch (Game)
+			if (Room->IsOpen())
 			{
-			case Video_Game::Resident_Evil_2_Trial:
-			case Video_Game::Resident_Evil_2:
-				if (Bio2->Rdt->IsOpen())
-				{
-					uint8_t i = Camera->SetImage(++Camera->Cut);
-					Camera->Set(Bio2->Rdt->Rid->Get(i)->ViewR >> 7, Bio2->Rdt->Rid->Get(i)->View_p, Bio2->Rdt->Rid->Get(i)->View_r);
-					SetLighting();
-				}
-				break;
+				uintmax_t i = Camera->SetImage(++Camera->m_Cut);
+				Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+				SetLighting();
 			}
 		}
 	}
@@ -509,6 +497,9 @@ void Global_Application::InitRender(uint32_t Width, uint32_t Height)
 void Global_Application::InitGame(void)
 {
 	{
+		ResetLighting();
+	}
+	{
 		Geometry->Init();
 	}
 	{
@@ -521,9 +512,8 @@ void Global_Application::InitGame(void)
 		Camera->Set(Camera->m_FOV, Camera->m_Eye, Camera->m_At);
 	}
 	{
-		ResetLighting();
+		Room->PlatformSetup(Window->Get(), GTE, Render, Camera->b_HorzFlip, Camera->b_VertFlip);
 	}
-
 	{
 		Player->PlatformSetup(Window->Get(), GTE, Render, Camera->b_HorzFlip, Camera->b_VertFlip);
 
@@ -646,7 +636,7 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 			Window->AutoFullscreen();
 		}
 
-		if (!Window->GetDroppedFiles().empty()) { DragAndDrop(Window->GetDroppedFiles()); Window->GetDroppedFiles().clear(); }
+		if (!Window->GetDroppedFiles().empty()) { DragAndDrop(Window->GetDroppedFiles()); Window->GetDroppedFiles().clear(); Window->GetDroppedFiles().shrink_to_fit(); }
 
 		Window->ChronoTimerInit(59.94);
 

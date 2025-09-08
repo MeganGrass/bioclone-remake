@@ -10,38 +10,19 @@
 bool Global_Application::IsRoomOpen(void)
 {
 	if (b_RoomFileOp) { return false; }
-	switch (Game)
-	{
-	case Video_Game::Resident_Evil_2_Nov_6_1996:
-	case Video_Game::Resident_Evil_2_Trial:
-	case Video_Game::Resident_Evil_2: return Bio2->Rdt->IsOpen();
-	}
-	return false;
+
+	return Room->IsOpen();
 }
 
 void Global_Application::CloseRDT(void)
 {
 	if (!IsRoomOpen()) { return; }
 
-	switch (Game)
-	{
-	case Video_Game::Resident_Evil_2_Nov_6_1996:
-	case Video_Game::Resident_Evil_2_Trial:
-	case Video_Game::Resident_Evil_2: if (Bio2->Rdt->IsOpen() && Window->Question(L"Do you want to save the current RDT file?")) { SaveRDT(); } break;
-	}
+	if (Room->IsOpen() && Window->Question(L"Do you want to save the current RDT file?")) { SaveRDT(); }
 
 	Camera->Reset();
 
-	switch (Game)
-	{
-	case Video_Game::Resident_Evil_2_Nov_6_1996:
-	case Video_Game::Resident_Evil_2_Trial:
-	case Video_Game::Resident_Evil_2: Bio2->Rdt->Close(); break;
-	}
-
-	Stage = 0;
-	Room = 0;
-	Disk = 0;
+	Room->Close();
 
 	Geometry->iObjectMax = 0;
 
@@ -56,57 +37,33 @@ void Global_Application::OpenRDT(void)
 
 	if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
 
-	if (auto Filename = Window->GetOpenFilename({ GameStrW().c_str()}, {L"*.rdt"}); Filename.has_value())
+	if (auto Filename = Window->GetOpenFilename({ Room->GameStrW().c_str() }, { L"*.rdt" }); Filename.has_value())
 	{
-		switch (Game)
+		if (Room->Open(Filename.value()))
 		{
-		case Video_Game::Resident_Evil_2_Nov_6_1996:
-		case Video_Game::Resident_Evil_2_Trial:
-		case Video_Game::Resident_Evil_2:
-			if (Bio2->Rdt->Open(Filename.value()))
-			{
-				Stage = Bio2->Rdt->Stage;
-				Room = Bio2->Rdt->Room;
-				Disk = Bio2->Rdt->Disk;
+			Camera->b_ViewTopDown = false;
+			Camera->b_ViewModelEdit = false;
 
-				Camera->b_ViewTopDown = false;
-				Camera->b_ViewModelEdit = false;
+			Camera->m_Cx = GTE->ToFloat(Room->Sca->GetHeader()->Cx);
+			Camera->m_Cz = GTE->ToFloat(Room->Sca->GetHeader()->Cz);
 
-				Camera->m_Cx = GTE->ToFloat(Bio2->Rdt->Sca->GetHeader()->Cx);
-				Camera->m_Cz = GTE->ToFloat(Bio2->Rdt->Sca->GetHeader()->Cz);
+			Camera->SetMeta(Room->m_Path, Room->m_Stage, Room->m_Room, Room->GetCameraCount());
+			Camera->SetImage(0);
+			Camera->Set(Room->Rid->Get(0)->ViewR >> 7, Room->Rid->Get(0)->View_p, Room->Rid->Get(0)->View_r);
 
-				Camera->SetMeta(Bio2->Rdt->m_Path, Bio2->Rdt->Stage, Bio2->Rdt->Room, Bio2->Rdt->GetCameraCount());
-				Camera->SetImage(0);
-				Camera->Set(Bio2->Rdt->Rid->Get(0)->ViewR >> 7, Bio2->Rdt->Rid->Get(0)->View_p, Bio2->Rdt->Rid->Get(0)->View_r);
+			Geometry->iObjectMax = Room->Sca->Count() ? Room->Sca->Count() - 1 : 0;
 
-				Geometry->iObjectMax = Bio2->Rdt->Sca->Count() ? Bio2->Rdt->Sca->Count() - 1 : 0;
+			SetLighting();
 
-				SetLighting();
-			}
-			break;
+			Player->SetRoomAnimations(Room->Rbj);
 		}
 	}
 
 	CoUninitialize();
-
-	SetRoomAnimations();
 }
 
 void Global_Application::SaveRDT(void)
 {
-}
-
-void Global_Application::SetRoomAnimations(void)
-{
-	switch (Game)
-	{
-	case Video_Game::Resident_Evil_2_Nov_6_1996:
-	case Video_Game::Resident_Evil_2_Trial:
-	case Video_Game::Resident_Evil_2:
-		if (Bio2->Rdt->IsOpen()) { Rbj = Bio2->Rdt->Rbj; } break;
-	}
-
-	Player->SetRoomAnimations(Rbj);
 }
 
 void Global_Application::OpenPlayerModel(std::filesystem::path Filename)
@@ -114,7 +71,7 @@ void Global_Application::OpenPlayerModel(std::filesystem::path Filename)
 	if (!Filename.empty())
 	{
 		Player->Open(Filename);
-		SetRoomAnimations();
+		Player->SetRoomAnimations(Room->Rbj);
 		return;
 	}
 
@@ -126,7 +83,7 @@ void Global_Application::OpenPlayerModel(std::filesystem::path Filename)
 	); Filename.has_value())
 	{
 		Player->Open(Filename.value());
-		SetRoomAnimations();
+		Player->SetRoomAnimations(Room->Rbj);
 	}
 
 	CoUninitialize();
