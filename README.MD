@@ -1,36 +1,59 @@
 # BioClone Remake
-Multi-purpose utility application for classic Resident Evil video games for Sony PlayStation (PSX/PS1/PSone) and PC counterparts
-- Model Viewer (Resident Evil, Resident Evil 2, Resident Evil 3)
-- Room Testing (Resident Evil, Resident Evil 2 (Nov '96 Proto), Resident Evil 2)
-- Gameplay Testing (via controller input)
+Multi-purpose utility and viewer application for classic Resident Evil video games for Sony PlayStation (PSX/PS1/PSone) and PC counterparts
+- Model Viewer -- Resident Evil (Aug/Oct '95 Alpha and Final Retail), Resident Evil 2 (Nov '96 Proto and Final Retail), Resident Evil 3
+- Gameplay Testing -- test animations, collision, camera switches, lighting and more in real-time
 
 ## Notice
 - This is an extremely early, open-source test version rewrite of "BioClone Redux"
 - Do not expect modification abilities of "BioClone Redux," yet...
 
 ## Supported File Formats
-- RDT (Resident Evil, Resident Evil 2 (Nov '96 Proto), Resident Evil 2)
+- RDT  -- Resident Evil (Aug/Oct '95 Alpha and Final Retail), Resident Evil 2 (Nov '96 Proto and Final Retail)
 - TMD, MD1, MD2, EMD, EMW, PLD and PLW model data
 - TIM, BMP, PNG and JPG model texture
 
 ## Basics
+Background and Mask images must be located in same directory as RDT
+
 ##### **Prerendered Backgrounds**
 - Must be either TIM or PNG with naming convention: ROOMXYYZZ (example: ROOM20B10.PNG)
 ##### **Camera Sprite Masks**
 - Must be either TIM or PNG with naming convention: ROOM_XYY_ZZ_MASK (example: ROOM_20B_10_MASK.PNG)
 
-Background and Mask images must be located in same directory as RDT
+## Gameplay Testing
+ - Requires XInput compatible controller
+ - Button map assignment via main menu (View -> Controller Map)
+ - Character Model (EMD/PLD) and Weapon (EMW/PLW) both must be open
+ - Character Models and Weapons both must be from same game (can't use Bio1 EMW with Bio2 PLD, for example)
 
-## Keyboard/Mouse
+## Keyboard/Mouse (General)
 | Option | Description                       |
 | :-------- | :-------------------------------- |
 | `CTRL+O` | Open RDT |
-| `LEFT/RIGHT` | View previous/next camera |
-| `CTRL+LEFT/RIGHT` | View previous/next animation |
-| `CTRL+MOUSEWHEEL` | Adjust render zoom (when hovering render viewport) |
 | `F11` | Enter/Exit fullscreen mode |
 | `CTRL+?` | About this application |
 | `ESC` | Exit Application |
+
+## Keyboard/Mouse (3D Layout)
+| Option | Description                       |
+| :-------- | :-------------------------------- |
+| `LEFT/RIGHT` | Previous/Next Camera (when room is open) |
+| `CTRL+MOUSEWHEEL` | Zoom (when hovering render viewport) |
+
+## Keyboard/Mouse (2D Layout)
+| Option | Description                       |
+| :-------- | :-------------------------------- |
+| `MOUSEWHEEL(S)` | Move Center Position X/Z |
+| `CTRL+MOUSEWHEEL` | Zoom |
+
+## Keyboard/Mouse (Editor/Viewer)
+| Option | Description                       |
+| :-------- | :-------------------------------- |
+| `CTRL+LEFT/RIGHT` | Previous/Next Animation (when character model is open) |
+| `MOUSEWHEEL` | Zoom |
+| `RIGHT-MOUSE-BUTTON` | Orbit |
+| `MIDDLE-MOUSE-BUTTON` | Pan |
+| `RIGHT-MOUSE (Double-Click)` | Reset |
 
 ## Controller
 - Support provided via XInput
@@ -39,8 +62,10 @@ Background and Mask images must be located in same directory as RDT
 - Character (PLD) and Weapon (PLW) both must be open
 
 ## Images
-![Preliminary Test](/images/preliminary_test.jpg?raw=true "Preliminary Test")
-![Preliminary Test](/images/preliminary_test_2.jpg?raw=true "Preliminary Test 2, lighting, \"shadow\"")
+![3D Layout](/images/3d_layout.jpg?raw=true "3D Layout")
+![2D Layout](/images/2d_layout.jpg?raw=true "2D Layout")
+![Model Viewer](/images/model_viewer.jpg?raw=true "Model Viewer")
+![Room Model Viewer](/images/room_model_viewer.jpg?raw=true "Room Model Viewer")
 
 ## TODO
 - a lot :)

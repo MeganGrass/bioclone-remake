@@ -7,262 +7,1562 @@
 
 #include "app.h"
 
-void Global_Application::ControllerMapping(void)
+static constexpr Resident_Evil_Key NONE = Resident_Evil_Key::NONE;
+static constexpr Resident_Evil_Key UP = Resident_Evil_Key::UP;
+static constexpr Resident_Evil_Key RIGHT = Resident_Evil_Key::RIGHT;
+static constexpr Resident_Evil_Key DOWN = Resident_Evil_Key::DOWN;
+static constexpr Resident_Evil_Key LEFT = Resident_Evil_Key::LEFT;
+static constexpr Resident_Evil_Key AIM_UP = Resident_Evil_Key::AIM_UP;
+static constexpr Resident_Evil_Key AIM_DOWN = Resident_Evil_Key::AIM_DOWN;
+static constexpr Resident_Evil_Key AIM_FIRE = Resident_Evil_Key::AIM_FIRE;
+static constexpr Resident_Evil_Key INSPECT = Resident_Evil_Key::INSPECT;
+static constexpr Resident_Evil_Key AIM = Resident_Evil_Key::AIM;
+static constexpr Resident_Evil_Key RUN = Resident_Evil_Key::RUN;
+static constexpr Resident_Evil_Key PREV = Resident_Evil_Key::PREV;
+static constexpr Resident_Evil_Key NEXT = Resident_Evil_Key::NEXT;
+static constexpr Resident_Evil_Key CONFIRM = Resident_Evil_Key::CONFIRM;
+static constexpr Resident_Evil_Key CANCEL = Resident_Evil_Key::CANCEL;
+static constexpr Resident_Evil_Key STATUS = Resident_Evil_Key::STATUS;
+static constexpr Resident_Evil_Key NOTHING = Resident_Evil_Key::NOTHING;
+
+void Global_Application::InitCommonStateBio1(std::uintmax_t iWeapon)
 {
-	std::function<void(const std::string&)> SetMapping = [&](const std::string& Button)
-		{
-			auto This = std::shared_ptr<Global_Application>(this, [](Global_Application*) {});
+	Idle_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Idle_Turn, "Idle_Turn");
 
-			auto ThreadWork = std::thread([This, Button]()
-				{
-					This->b_ControllerMapping.store(true);
+	Quick_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Turn, "Quick_Turn");
+	Quick_Reload = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Reload, "Quick_Reload");
 
-					std::function<void(bool&)> Callback = [&](bool& b_Status) -> void { This->b_ControllerMapping.store(b_Status); };
+	Walk_Backward = StateType(AnimationIndex::Normal, AnimStatePlayerBio1::Walk_Backward, "Walk_Backward");
+	Walk_Backward_Startled = StateType(AnimationIndex::Normal, AnimStatePlayerBio1::Walk_Backward_Startled, "Walk_Backward_Startled");
+	Walk_Backward_Caution = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Walk_Backward_Caution");
 
-					This->Gamepad->SetMapping(Button, Callback);
-				});
+	Inspect_Kneel = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Inspect_Kneel, "Inspect_Kneel");
 
-			ThreadWork.detach();
-		};
+	Push_Begin = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Push_Begin");
+	Push = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Push");
 
-	auto GetButtonStr = [this](const std::string& ButtonStr)
-		{
-			if (Gamepad->GetTriggerMapL(ButtonStr)) { return Standard_String().FormatCStyle("L##%s", ButtonStr.c_str()); }
-			if (Gamepad->GetTriggerMapR(ButtonStr)) { return Standard_String().FormatCStyle("R##%s", ButtonStr.c_str()); }
+	Damage_Front_Minor = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Damage_Front_Minor");
+	Damage_Back = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Damage_Back");
+	Damage_Front = StateType(AnimationIndex::Normal, AnimStatePlayerBio1::Damage_Front, "Damage_Front");
 
-			uint16_t Button = Gamepad->GetButtonMapBit(ButtonStr);
-			if (Button == 0xFFFF) { return Standard_String().FormatCStyle("---##%s", ButtonStr.c_str()); }
-			return Standard_String().FormatCStyle("%d##%s", Button, ButtonStr.c_str());
-		};
+	Death = StateType(AnimationIndex::Normal, AnimStatePlayerBio1::Death, "Death");
+}
 
-	if (!ImGui::IsPopupOpen("Controller##ControllerMapping"))
+void Global_Application::InitWeaponStateBio1(std::uintmax_t iWeapon)
+{
+	Idle = StateType(AnimationIndex::Normal, AnimStatePlayerBio1::Idle, "Idle");
+	Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Idle_Pose_Begin, "Idle_Pose_Begin");
+	Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Idle_Pose, "Idle_Pose");
+	Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Idle_Pose_Extra");
+	Idle_Caution = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Caution");
+	Idle_Danger = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Danger");
+
+	Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Walk_Forward, "Walk_Forward");
+	Walk_Forward_Caution = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Walk_Forward_Caution");
+	Walk_Forward_Danger = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Walk_Forward_Danger");
+
+	Run = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Run, "Run");
+	Run_Caution = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Run_Caution");
+	Run_Danger = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Run_Danger");
+
+	Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Begin");
+	Aim_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward_Begin");
+	Aim_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward_Begin");
+
+	Aim = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim");
+	Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward");
+	Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward");
+
+	Fire_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Begin");
+	Fire_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Begin");
+	Fire_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Begin");
+
+	Fire_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_End");
+	Fire_Upward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_End");
+	Fire_Downward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_End");
+
+	Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Empty");
+	Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Empty");
+	Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Empty");
+
+	Fire = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire");
+	Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward");
+	Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward");
+
+	Fire_Blocked = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Blocked");
+
+	Reload = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Reload");
+
+	if (iWeapon == 0x00 || iWeapon == 0x0B)
 	{
-		ImGui::OpenPopup("Controller##ControllerMapping");
+	}
+	else if (iWeapon == 0x01)
+	{
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio1::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x05)
+	{
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim_Begin, "Aim_Begin");
+		Aim_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim_Upward_Begin, "Aim_Upward_Begin");
+		Aim_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim_Downward_Begin, "Aim_Downward_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Aim_Downward, "Aim_Downward");
+
+		Fire_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire_Begin, "Fire_Begin");
+		Fire_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire_Upward_Begin, "Fire_Upward_Begin");
+		Fire_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire_Downward_Begin, "Fire_Downward_Begin");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW05Bio1::Fire_Downward, "Fire_Downward");
+	}
+	else
+	{
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim_Begin, "Aim_Begin");
+		Aim_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim_Upward_Begin, "Aim_Upward_Begin");
+		Aim_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim_Downward_Begin, "Aim_Downward_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Fire_Downward, "Fire_Downward");
+
+		Reload = StateType(AnimationIndex::Weapon, AnimStateW02Bio1::Reload, "Reload");
 	}
 
-	ImGui::SetNextWindowPos(ImVec2((ImGui::GetIO().DisplaySize.x - ImGui::GetWindowSize().x) / 2, (ImGui::GetIO().DisplaySize.y - ImGui::GetWindowSize().y) / 3));
-
-	if (ImGui::BeginPopupModal("Controller##ControllerMapping", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
+	if (iWeapon == 0x07)
 	{
-		if (ImGui::BeginTable("MapPanel##ControllerMapping", 2))
-		{
-			ImGui::TableNextColumn(); ImGui::Text("Aim"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Aim").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Aim"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Cancel"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Cancel").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Cancel"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Action"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Action").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Action"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Run"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Run").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Run"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Forward"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Forward").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Forward"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Backward"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Backward").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Backward"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Left"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Left").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Left"); }
-
-			ImGui::TableNextColumn(); ImGui::Text("Right"); ImGui::TableNextColumn();
-			if (ImGui::Button(GetButtonStr("Right").c_str(), ImVec2(100, ImGui::GetFrameHeight()))) { SetMapping("Right"); }
-
-			ImGui::EndTable();
-		}
-
-		{
-			ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 200) / 2);
-			if (ImGui::Button("OK##ControllerMapping", ImVec2(200, 40)))
-			{
-				b_ControllerMapping.store(false);
-				Modal = []() {};
-				ImGui::CloseCurrentPopup();
-			}
-		}
-
-		ImGui::SetWindowSize(ImVec2(ImGui::GetItemRectMax().x + ImGui::GetStyle().WindowPadding.x, ImGui::GetItemRectMax().y + ImGui::GetStyle().WindowPadding.y));
-
-		ImGui::EndPopup();
+		Reload = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Reload");
 	}
 }
 
-void Global_Application::ControllerInput(std::unique_ptr<Resident_Evil_Model>& Model)
+void Global_Application::InitCommonStateBio2Nov96(std::uintmax_t iWeapon)
 {
-	if (!Model->b_ControllerMode) { return; }
+	Idle_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Idle_Turn, "Idle_Turn");
 
-	VECTOR2& Rotation = Model->b_EditorMode ? Model->EditorRotation() : Model->Rotation();
+	Quick_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Turn, "Quick_Turn");
+	Quick_Reload = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Reload, "Quick_Reload");
 
-	if (Model->b_QuickTurn.load())
+	Walk_Backward = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Walk_Backward, "Walk_Backward");
+	Walk_Backward_Startled = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Walk_Backward_Startled, "Walk_Backward_Startled");
+	Walk_Backward_Caution = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Walk_Backward_Caution");
+
+	Inspect_Kneel = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Inspect_Kneel, "Inspect_Kneel");
+
+	Push_Begin = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Push_Begin, "Push_Begin");
+	Push = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Push, "Push");
+
+	Damage_Front_Minor = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Damage_Front_Minor, "Damage_Front_Minor");
+	Damage_Back = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Damage_Back, "Damage_Back");
+	Damage_Front = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Damage_Front, "Damage_Front");
+
+	Death = StateType(AnimationIndex::Normal, AnimStatePlayerBio2Nov96::Death, "Death");
+}
+
+void Global_Application::InitWeaponStateBio2Nov96(std::uintmax_t iWeapon)
+{
+	Idle = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle");
+	Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Pose_Begin");
+	Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Pose");
+	Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Idle_Pose_Extra");
+	Idle_Caution = StateType(AnimationIndex::Weapon, AnimStatePlayerBio2Nov96::Idle_Caution, "Idle_Caution");
+	Idle_Danger = StateType(AnimationIndex::Weapon, AnimStatePlayerBio2Nov96::Idle_Danger, "Idle_Danger");
+
+	Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Walk_Forward");
+	Walk_Forward_Caution = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Walk_Forward_Caution");
+	Walk_Forward_Danger = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Walk_Forward_Danger");
+
+	Run = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Run");
+	Run_Caution = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Run_Caution");
+	Run_Danger = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Run_Danger");
+
+	Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Begin");
+	Aim_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward_Begin");
+	Aim_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward_Begin");
+
+	Aim = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim");
+	Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward");
+	Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward");
+
+	Fire_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Begin");
+	Fire_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Begin");
+	Fire_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Begin");
+
+	Fire_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_End");
+	Fire_Upward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_End");
+	Fire_Downward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_End");
+
+	Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Empty");
+	Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Empty");
+	Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Empty");
+
+	Fire = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire");
+	Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward");
+	Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward");
+
+	Fire_Blocked = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Blocked");
+
+	Reload = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Reload");
+
+	if (iWeapon == 0x00)
 	{
-		if (Model->m_QuickTurnRotation.load() <= 0)
-		{
-			Model->b_QuickTurn.store(false);
-			Model->m_QuickTurnRotation.store(0);
-			Model->ResetFrame(Bio2PlayerState::Idle);
-			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
-			return;
-		}
-		else
-		{
-			Model->m_QuickTurnRotation -= 64;
-			Rotation.y += 64;
-			Model->ClampRotation(Rotation);
-			return;
-		}
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Idle_Pose, "Idle_Pose");
+	}
+	else if (iWeapon == 0x02 || iWeapon == 0x04 || iWeapon == 0x06 || iWeapon == 0x0E || iWeapon == 0x0F || iWeapon == 0x012)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Idle_Pose_Begin, "Idle_Pose_Begin");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW00Bio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2Nov96::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x01)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Idle, "Idle_Pose");
+		Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Idle_Pose_Begin, "Idle_Pose_Begin");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW01Bio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Walk_Forward, "Walk_Forward");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2Nov96::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x03 || iWeapon == 0x05 || iWeapon == 0x07 || iWeapon == 0x08 || iWeapon == 0x0D)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Idle, "Idle_Pose");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW03Bio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Walk_Forward, "Walk_Forward");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Fire_Downward, "Fire_Downward");
+
+		Reload = StateType(AnimationIndex::Weapon, AnimStateW03Bio2Nov96::Reload, "Reload");
+	}
+	else if (iWeapon == 0x09 || iWeapon == 0x0A || iWeapon == 0x0B)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Idle, "Idle_Pose");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW09Bio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Walk_Forward, "Walk_Forward");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW09Bio2Nov96::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x0C || iWeapon == 0x13)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Idle, "Idle_Pose");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW0CBio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Walk_Forward, "Walk_Forward");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire_Empty, "Fire_Empty");
+		Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire_Upward_Empty, "Fire_Upward_Empty");
+		Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire_Downward_Empty, "Fire_Downward_Empty");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW0CBio2Nov96::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x10 || iWeapon == 0x11 || iWeapon == 0x14)
+	{
+		Idle = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Idle_Pose_Begin, "Idle_Pose_Begin");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Idle_Pose, "Idle_Pose");
+		Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateW10Bio2Nov96::Idle_Pose_Extra, "Idle_Pose_Extra");
+
+		Run = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Run, "Run");
+
+		Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Aim_Begin, "Aim_Begin");
+
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Aim_Downward, "Aim_Downward");
+
+		Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire_Empty, "Fire_Empty");
+		Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire_Upward_Empty, "Fire_Upward_Empty");
+		Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire_Downward_Empty, "Fire_Downward_Empty");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW10Bio2Nov96::Fire_Downward, "Fire_Downward");
+	}
+}
+
+void Global_Application::InitCommonStateBio2(std::uintmax_t iWeapon)
+{
+	Idle_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Idle_Turn, "Idle_Turn");
+
+	Quick_Turn = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Turn, "Quick_Turn");
+	Quick_Reload = StateType(AnimationIndex::Normal, AnimStateCustom::Quick_Reload, "Quick_Reload");
+
+	Walk_Backward = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Walk_Backward, "Walk_Backward");
+	Walk_Backward_Startled = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Walk_Backward_Startled, "Walk_Backward_Startled");
+	Walk_Backward_Caution = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Walk_Backward_Caution, "Walk_Backward_Caution");
+
+	Inspect_Kneel = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Inspect_Kneel, "Inspect_Kneel");
+
+	Push_Begin = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Push_Begin, "Push_Begin");
+	Push = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Push, "Push");
+
+	Damage_Front_Minor = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Damage_Front_Minor, "Damage_Front_Minor");
+	Damage_Back = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Damage_Back, "Damage_Back");
+	Damage_Front = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Damage_Front, "Damage_Front");
+
+	Death = StateType(AnimationIndex::Normal, AnimStatePlayerBio2::Death, "Death");
+}
+
+void Global_Application::InitWeaponStateBio2(std::uintmax_t iWeapon)
+{
+	Idle = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Idle, "Idle");
+	Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Pose_Begin");
+	Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Idle_Pose");
+	Idle_Pose_Extra = StateType(AnimationIndex::Normal, AnimStateCustom::Dummy, "Idle_Pose_Extra");
+	Idle_Caution = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Idle_Caution, "Idle_Caution");
+	Idle_Danger = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Idle_Danger, "Idle_Danger");
+
+	Walk_Forward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Walk_Forward, "Walk_Forward");
+	Walk_Forward_Caution = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Walk_Forward_Caution, "Walk_Forward_Caution");
+	Walk_Forward_Danger = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Walk_Forward_Danger, "Walk_Forward_Danger");
+
+	Run = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Run, "Run");
+	Run_Caution = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Run_Caution, "Run_Caution");
+	Run_Danger = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Run_Danger, "Run_Danger");
+
+	Aim_Begin = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Aim_Begin, "Aim_Begin");
+	Aim_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward_Begin");
+	Aim_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward_Begin");
+
+	Aim = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim");
+	Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Upward");
+	Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Aim_Downward");
+
+	Fire_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Begin");
+	Fire_Upward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Begin");
+	Fire_Downward_Begin = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Begin");
+
+	Fire_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_End");
+	Fire_Upward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_End");
+	Fire_Downward_End = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_End");
+
+	Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Empty");
+	Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward_Empty");
+	Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward_Empty");
+
+	Fire = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire");
+	Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Upward");
+	Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Downward");
+
+	Fire_Blocked = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Fire_Blocked");
+
+	Reload = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Reload");
+
+	if (iWeapon == 0x00)
+	{
+	}
+	else if (iWeapon == 0x01)
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Aim_Downward, "Aim_Downward");
+
+		Fire_Blocked = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Fire_Blocked, "Fire_Blocked");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW01Bio2::Fire_Downward, "Fire_Downward");
+	}
+	else if (iWeapon == 0x0E)
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW0EBio2::Aim, "Aim");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW0EBio2::Fire, "Fire");
+
+		Reload = StateType(AnimationIndex::Weapon, AnimStateW0EBio2::Reload, "Reload");
+	}
+	else if (iWeapon == 0x0F || iWeapon == 0x10)
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Aim_Downward, "Aim_Downward");
+
+		Fire_Empty = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire_Empty, "Fire_Empty");
+		Fire_Upward_Empty = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire_Upward_Empty, "Fire_Upward_Empty");
+		Fire_Downward_Empty = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire_Downward_Empty, "Fire_Downward_Empty");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Fire_Downward, "Fire_Downward");
+
+		Reload = StateType(AnimationIndex::Weapon, AnimStateW0FBio2::Reload, "Reload");
+	}
+	else if (iWeapon == 0x11)
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW11Bio2::Aim, "Aim");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW11Bio2::Fire, "Fire");
+	}
+	else if (iWeapon == 0x12)
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW12Bio2::Aim, "Aim");
+
+		Fire_Begin = StateType(AnimationIndex::Weapon, AnimStateW12Bio2::Fire_Begin, "Fire_Begin");
+		Fire_End = StateType(AnimationIndex::Weapon, AnimStateW12Bio2::Fire_End, "Fire_End");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW12Bio2::Fire, "Fire");
+	}
+	else
+	{
+		Aim = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Aim, "Aim");
+		Aim_Upward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Aim_Upward, "Aim_Upward");
+		Aim_Downward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Aim_Downward, "Aim_Downward");
+
+		Fire = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Fire, "Fire");
+		Fire_Upward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Fire_Upward, "Fire_Upward");
+		Fire_Downward = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Fire_Downward, "Fire_Downward");
+
+		Reload = StateType(AnimationIndex::Weapon, AnimStateW00Bio2::Reload, "Reload");
 	}
 
-	bool b_AimBegin = (Model->State() == Bio2PlayerState::Aim_Begin);
-	bool b_Firing = (Model->State() == Bio2PlayerState::Fire) || (Model->State() == Bio2PlayerState::Fire_Upward) || (Model->State() == Bio2PlayerState::Fire_Downward);
-	bool b_Aiming = (Model->State() == Bio2PlayerState::Aim) || (Model->State() == Bio2PlayerState::Aim_Upward) || (Model->State() == Bio2PlayerState::Aim_Downward);
-	bool b_Running = (Model->PriorState() == Bio2PlayerState::Run) || (Model->PriorState() == Bio2PlayerState::Run_Caution) || (Model->PriorState() == Bio2PlayerState::Run_Danger);
+	if (iWeapon == 0x09 || iWeapon == 0x0A || iWeapon == 0x0B)
+	{
+		Reload = StateType(AnimationIndex::Weapon, AnimStateCustom::Dummy, "Reload");
+	}
+
+	if (iWeapon == 0x13)
+	{
+		Idle_Pose_Begin = StateType(AnimationIndex::Weapon, AnimStateW13Bio2::Idle_Pose_Begin, "Idle_Pose_Begin");
+		Idle_Pose = StateType(AnimationIndex::Weapon, AnimStateW13Bio2::Idle_Pose, "Idle_Pose");
+	}
+}
+
+void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Model, std::unique_ptr<StateMachineType>& State)
+{
+	if (State)
+	{
+		State->Reset();
+		State.reset();
+	}
+
+	if (!Model)
+	{
+		return;
+	}
+
+	if (Model->ModelGame() & (AUG95 | OCT95 | BIO1) && Model->WeaponModelGame() & (AUG95 | OCT95 | BIO1))
+	{
+		InitCommonStateBio1(Model->m_WeaponID);
+		InitWeaponStateBio1(Model->m_WeaponID);
+	}
+	else if (Model->ModelGame() & (BIO2NOV96) && Model->WeaponModelGame() & (BIO2NOV96))
+	{
+		InitCommonStateBio2Nov96(Model->m_WeaponID);
+		InitWeaponStateBio2Nov96(Model->m_WeaponID);
+	}
+	else if (Model->ModelGame() & (BIO2TRIAL | BIO2) && Model->WeaponModelGame() & (BIO2TRIAL | BIO2))
+	{
+		InitCommonStateBio2(Model->m_WeaponID);
+		InitWeaponStateBio2(Model->m_WeaponID);
+	}
+	else
+	{
+		return;
+	}
+
+	State = std::make_unique<StateMachineType>(Model);
+
+	// Idle
+	{
+		State->Add(Idle,
+			[&]()
+			{
+				if ((State->KeyState() & LEFT) != Resident_Evil_Key{} || (State->KeyState() & RIGHT) != Resident_Evil_Key{})
+				{
+					State->Set(Idle_Turn);
+				}
+				else if (State->Model()->IsHealthDanger())
+				{
+					State->Init(Idle_Danger, 0, false, false, true);
+				}
+				else if (State->Model()->IsHealthCaution())
+				{
+					State->Init(Idle_Caution, 0, false, false, true);
+				}
+				else
+				{
+					State->Init(Idle, 0, false, false, true);
+				}
+			},
+			[&]()
+			{
+				if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					State->Set(Aim_Begin);
+				}
+				else if ((State->KeyState() & DOWN) != Resident_Evil_Key{})
+				{
+					State->Set(Walk_Backward);
+				}
+				else if ((State->KeyState() & RUN) != Resident_Evil_Key{})
+				{
+					State->Set(Run);
+				}
+				else if ((State->KeyState() & UP) != Resident_Evil_Key{} && Walk_Forward.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					State->Set(Walk_Forward);
+				}
+				else if ((State->KeyState() & RIGHT) != Resident_Evil_Key{} || (State->KeyState() & LEFT) != Resident_Evil_Key{})
+				{
+					State->Set(Idle_Turn);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Idle-Turn
+	{
+		State->Add(Idle_Turn,
+			[&]()
+			{
+				if (State->Model()->IsHealthDanger() || State->Model()->IsHealthCaution())
+				{
+					State->Init(Walk_Backward_Caution, 0, false, false, true);
+				}
+				else
+				{
+					State->Init(Walk_Backward, 0, false, false, true);
+				}
+				State->Model()->b_IdleTurn.store(true);
+			},
+			[&]()
+			{
+				if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					State->Set(Aim_Begin);
+				}
+				else if ((State->KeyState() & DOWN) != Resident_Evil_Key{})
+				{
+					State->Set(Walk_Backward);
+				}
+				else if ((State->KeyState() & UP) != Resident_Evil_Key{} && Walk_Forward.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					State->Set(Walk_Forward);
+				}
+				else if ((State->KeyState() & LEFT) != Resident_Evil_Key{} || (State->KeyState() & RIGHT) != Resident_Evil_Key{})
+				{
+				}
+				else
+				{
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+				State->Model()->b_IdleTurn.store(false);
+			}
+		);
+	}
+
+	// Quick-Turn
+	{
+		State->Add(Quick_Turn,
+			[&]()
+			{
+				if (State->Model()->IsHealthDanger() || State->Model()->IsHealthCaution())
+				{
+					State->Init(Walk_Backward_Caution, 0, false, false, false);
+				}
+				else
+				{
+					State->Init(Walk_Backward, 0, false, false, false);
+				}
+				State->Model()->b_QuickTurn.store(true);
+				State->Model()->m_QuickTurnRotation.store(2048);
+			},
+			[&]()
+			{
+				if (State->Model()->m_QuickTurnRotation.load())
+				{
+					State->Model()->m_QuickTurnRotation.fetch_sub(64);
+					if (State->Model()->b_EditorMode)
+					{
+						State->Model()->EditorRotation().y += 64;
+						State->Model()->ClampRotation(State->Model()->EditorRotation());
+					}
+					else
+					{
+						State->Model()->Rotation().y += 64;
+						State->Model()->ClampRotation(State->Model()->Rotation());
+					}
+				}
+				else if (State->Model()->m_QuickTurnRotation.load() <= 0)
+				{
+					State->Model()->b_QuickTurn.store(false);
+					State->Model()->m_QuickTurnRotation.store(0);
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Quick-Reload
+	{
+		State->Add(Quick_Reload,
+			[&]()
+			{
+				State->Init(Reload, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_PlayInReverse.store(false);
+				}
+				else
+				{
+					State->Set(Aim);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Walk Backward
+	{
+		State->Add(Walk_Backward,
+			[&]()
+			{
+				if (State->Model()->IsHealthDanger() || State->Model()->IsHealthCaution())
+				{
+					State->Init(Walk_Backward_Caution, 0, false, false, true);
+				}
+				else
+				{
+					State->Init(Walk_Backward, 0, false, false, true);
+				}
+			},
+			[&]()
+			{
+				if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					State->Set(Aim_Begin);
+				}
+				else if ((State->KeyState() & RUN) != Resident_Evil_Key{})
+				{
+					State->Set(Quick_Turn);
+				}
+				else if (!((State->KeyState() & DOWN) != Resident_Evil_Key{}))
+				{
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Walk Forward
+	{
+		State->Add(Walk_Forward,
+			[&]()
+			{
+				if (State->Model()->IsHealthDanger())
+				{
+					State->Init(Walk_Forward_Danger, 0, false, false, true);
+				}
+				else if (State->Model()->IsHealthCaution())
+				{
+					State->Init(Walk_Forward_Caution, 0, false, false, true);
+				}
+				else
+				{
+					State->Init(Walk_Forward, 0, false, false, true);
+				}
+			},
+			[&]()
+			{
+				if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					State->Set(Aim_Begin);
+				}
+				else if ((State->KeyState() & RUN) != Resident_Evil_Key{})
+				{
+					State->Set(Run);
+				}
+				else if (!((State->KeyState() & UP) != Resident_Evil_Key{}))
+				{
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Run
+	{
+		State->Add(Run,
+			[&]()
+			{
+				if (State->Model()->IsHealthDanger())
+				{
+					State->Init(Run_Danger, 0, false, false, true);
+				}
+				else if (State->Model()->IsHealthCaution())
+				{
+					State->Init(Run_Caution, 0, false, false, true);
+				}
+				else
+				{
+					State->Init(Run, 0, false, false, true);
+				}
+			},
+			[&]()
+			{
+				if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					State->Set(Aim_Begin);
+				}
+				else if (!((State->KeyState() & RUN) != Resident_Evil_Key{}))
+				{
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim Begin
+	{
+		State->Add(Aim_Begin,
+			[&]()
+			{
+				if (State->Prior() == Aim)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Aim_Begin.GetIndex())->GetFrameCount(Aim_Begin.GetClip()) - 1;
+					State->Init(Aim_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Aim_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Aim_Begin.GetIndex())->GetFrameCount(Aim_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!((State->KeyState() & AIM) != Resident_Evil_Key{}))
+				{
+					if (State->Model()->b_PlayAllFrames.load())
+					{
+						State->Model()->b_PlayInReverse.store(true);
+					}
+					else
+					{
+						if (State->Model()->iFrame.load() == 0)
+						{
+							State->Set(Idle);
+						}
+						else
+						{
+							State->Model()->b_PlayAllFrames.store(true);
+							State->Model()->b_PlayInReverse.store(true);
+						}
+					}
+				}
+				else if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_PlayInReverse.store(false);
+				}
+				else if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					if (b_Complete)
+					{
+						State->Set(Aim);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Init(Aim_Begin, 0, true, false, false);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim Upward Begin
+	{
+		State->Add(Aim_Upward_Begin,
+			[&]()
+			{
+				if (State->Prior() == Aim_Upward || State->Prior() == Fire_Upward)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Aim_Upward_Begin.GetIndex())->GetFrameCount(Aim_Upward_Begin.GetClip()) - 1;
+					State->Init(Aim_Upward_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Aim_Upward_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Aim_Upward_Begin.GetIndex())->GetFrameCount(Aim_Upward_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!((State->KeyState() & AIM) != Resident_Evil_Key{}) || !((State->KeyState() & UP) != Resident_Evil_Key{}))
+				{
+					if (State->Model()->b_PlayAllFrames.load())
+					{
+						State->Model()->b_PlayInReverse.store(true);
+					}
+					else
+					{
+						if (State->Model()->iFrame.load() == 0)
+						{
+							State->Set(Aim);
+						}
+						else
+						{
+							State->Model()->b_PlayAllFrames.store(true);
+							State->Model()->b_PlayInReverse.store(true);
+						}
+					}
+				}
+				else if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_PlayInReverse.store(false);
+				}
+				else if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					if (b_Complete)
+					{
+						State->Set(Aim_Upward);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Init(Aim_Upward_Begin, 0, true, false, false);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim Downward Begin
+	{
+		State->Add(Aim_Downward_Begin,
+			[&]()
+			{
+				if (State->Prior() == Aim_Downward || State->Prior() == Fire_Downward)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Aim_Downward_Begin.GetIndex())->GetFrameCount(Aim_Downward_Begin.GetClip()) - 1;
+					State->Init(Aim_Downward_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Aim_Downward_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Aim_Downward_Begin.GetIndex())->GetFrameCount(Aim_Downward_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!((State->KeyState() & AIM) != Resident_Evil_Key{}) || !((State->KeyState() & DOWN) != Resident_Evil_Key{}))
+				{
+					if (State->Model()->b_PlayAllFrames.load())
+					{
+						State->Model()->b_PlayInReverse.store(true);
+					}
+					else
+					{
+						if (State->Model()->iFrame.load() == 0)
+						{
+							State->Set(Aim);
+						}
+						else
+						{
+							State->Model()->b_PlayAllFrames.store(true);
+							State->Model()->b_PlayInReverse.store(true);
+						}
+					}
+				}
+				else if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_PlayInReverse.store(false);
+				}
+				else if ((State->KeyState() & AIM) != Resident_Evil_Key{})
+				{
+					if (b_Complete)
+					{
+						State->Set(Aim_Downward);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Init(Aim_Downward_Begin, 0, true, false, false);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim
+	{
+		State->Add(Aim,
+			[&]()
+			{
+				State->Init(Aim, 0, false, false, false);
+			},
+			[&]()
+			{
+				if (!((State->KeyState() & AIM) != Resident_Evil_Key{}))
+				{
+					State->Set(Aim_Begin);
+				}
+				else if ((State->KeyState() & RUN) != Resident_Evil_Key{} && Reload.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					State->Set(Quick_Reload);
+				}
+				else if ((State->KeyState() & UP) != Resident_Evil_Key{} && Aim_Upward.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					if (Aim_Upward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Aim_Upward_Begin);
+					}
+					else
+					{
+						State->Set(Aim_Upward);
+					}
+				}
+				else if ((State->KeyState() & DOWN) != Resident_Evil_Key{} && Aim_Downward.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					if (Aim_Downward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Aim_Downward_Begin);
+					}
+					else
+					{
+						State->Set(Aim_Downward);
+					}
+				}
+				else if ((State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+				{
+					if (Fire_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Begin);
+					}
+					else
+					{
+						State->Set(Fire);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim Upward
+	{
+		State->Add(Aim_Upward,
+			[&]()
+			{
+				State->Init(Aim_Upward, 0, false, false, false);
+			},
+			[&]()
+			{
+				if (!((State->KeyState() & UP) != Resident_Evil_Key{}) || !((State->KeyState() & AIM) != Resident_Evil_Key{}))
+				{
+					if (Aim_Upward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Aim_Upward_Begin);
+					}
+					else
+					{
+						State->Set(Aim);
+					}
+				}
+				else if ((State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+				{
+					if (Fire_Upward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Upward_Begin);
+					}
+					else
+					{
+						State->Set(Fire_Upward);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Aim Downward
+	{
+		State->Add(Aim_Downward,
+			[&]()
+			{
+				State->Init(Aim_Downward, 0, false, false, false);
+			},
+			[&]()
+			{
+				if (!((State->KeyState() & DOWN) != Resident_Evil_Key{}) || !((State->KeyState() & AIM) != Resident_Evil_Key{}))
+				{
+					if (Aim_Downward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Aim_Downward_Begin);
+					}
+					else
+					{
+						State->Set(Aim);
+					}
+				}
+				else if ((State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+				{
+					if (Fire_Downward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Downward_Begin);
+					}
+					else
+					{
+						State->Set(Fire_Downward);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Begin
+	{
+		State->Add(Fire_Begin,
+			[&]()
+			{
+				if (State->Prior() == Fire)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Fire_Begin.GetIndex())->GetFrameCount(Fire_Begin.GetClip()) - 1;
+					State->Init(Fire_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Fire_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Fire_Begin.GetIndex())->GetFrameCount(Fire_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					if (b_Complete)
+					{
+						State->Set(Fire);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Set(Aim);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Upward Begin
+	{
+		State->Add(Fire_Upward_Begin,
+			[&]()
+			{
+				if (State->Prior() == Fire_Upward)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Fire_Upward_Begin.GetIndex())->GetFrameCount(Fire_Upward_Begin.GetClip()) - 1;
+					State->Init(Fire_Upward_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Fire_Upward_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Fire_Upward_Begin.GetIndex())->GetFrameCount(Fire_Upward_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					if (b_Complete)
+					{
+						State->Set(Fire_Upward);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Set(Aim_Upward);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Downward Begin
+	{
+		State->Add(Fire_Downward_Begin,
+			[&]()
+			{
+				if (State->Prior() == Fire_Downward)
+				{
+					size_t m_FrameCount = State->Model()->Animation(Fire_Downward_Begin.GetIndex())->GetFrameCount(Fire_Downward_Begin.GetClip()) - 1;
+					State->Init(Fire_Downward_Begin, m_FrameCount, true, true, false);
+				}
+				else
+				{
+					State->Init(Fire_Downward_Begin, 0, true, false, false);
+				}
+			},
+			[&]()
+			{
+				const auto m_FrameCount = State->Model()->Animation(Fire_Downward_Begin.GetIndex())->GetFrameCount(Fire_Downward_Begin.GetClip());
+				const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					if (b_Complete)
+					{
+						State->Set(Fire_Downward);
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Set(Aim_Downward);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire End
+	{
+		State->Add(Fire_End,
+			[&]()
+			{
+				State->Init(Fire_End, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					State->Set(Aim);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Upward End
+	{
+		State->Add(Fire_Upward_End,
+			[&]()
+			{
+				State->Init(Fire_Upward_End, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					State->Set(Aim_Upward);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Downward End
+	{
+		State->Add(Fire_Downward_End,
+			[&]()
+			{
+				State->Init(Fire_Downward_End, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					State->Set(Aim_Downward);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire
+	{
+		State->Add(Fire,
+			[&]()
+			{
+				State->Init(Fire, 0, true, false, false);
+				State->Model()->b_WeaponKickbackComplete.store(false);
+			},
+			[&]()
+			{
+				if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_WeaponKickbackComplete.store(true);
+				}
+				else if (Fire_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy) || Fire_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					if ((State->KeyState() & UP) != Resident_Evil_Key{} || (State->KeyState() & DOWN) != Resident_Evil_Key{})
+					{
+						if (Fire_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+						{
+							State->Set(Fire_End);
+						}
+						else if (Fire_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+						{
+							State->Set(Fire_Begin);
+						}
+					}
+					else if ((State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+					{
+						State->Set(Fire);
+						State->Model()->b_Loop.store(true);
+					}
+					else if (Fire_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_End);
+					}
+					else if (Fire_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Begin);
+					}
+				}
+				else
+				{
+					State->Set(Aim);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Upward
+	{
+		State->Add(Fire_Upward,
+			[&]()
+			{
+				State->Init(Fire_Upward, 0, true, false, false);
+				State->Model()->b_WeaponKickbackComplete.store(false);
+			},
+			[&]()
+			{
+				if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_WeaponKickbackComplete.store(true);
+				}
+				else if (Fire_Upward_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy) || Fire_Upward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					if ((State->KeyState() & UP) != Resident_Evil_Key{} && (State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+					{
+						State->Set(Fire_Upward);
+						State->Model()->b_Loop.store(true);
+					}
+					else if (Fire_Upward_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Upward_End);
+					}
+					else if (Fire_Upward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Upward_Begin);
+					}
+				}
+				else
+				{
+					State->Set(Aim_Upward);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	// Fire Downward
+	{
+		State->Add(Fire_Downward,
+			[&]()
+			{
+				State->Init(Fire_Downward, 0, true, false, false);
+				State->Model()->b_WeaponKickbackComplete.store(false);
+			},
+			[&]()
+			{
+				if (State->Model()->b_PlayAllFrames.load())
+				{
+					State->Model()->b_WeaponKickbackComplete.store(true);
+				}
+				else if (Fire_Downward_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy) || Fire_Downward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+				{
+					if ((State->KeyState() & DOWN) != Resident_Evil_Key{} && (State->KeyState() & AIM_FIRE) != Resident_Evil_Key{})
+					{
+						State->Set(Fire_Downward);
+						State->Model()->b_Loop.store(true);
+					}
+					else if (Fire_Downward_End.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Downward_End);
+					}
+					else if (Fire_Downward_Begin.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
+					{
+						State->Set(Fire_Downward_Begin);
+					}
+				}
+				else
+				{
+					State->Set(Aim_Downward);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
+	State->Set(Idle);
+}
+
+void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& State)
+{
+	if (!State || !State->Model()->b_ControllerMode) { return; }
+
+	Resident_Evil_Key m_KeyState = NONE;
 
 	if (!Gamepad->PollState())
 	{
-		if (b_AimBegin || b_Aiming || b_Firing || b_Running)
-		{
-			Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
-		}
-		else
-		{
-			Model->ResetFrame(Bio2PlayerState::Idle);
-			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
-		}
+		State->Update(m_KeyState, false);
 		return;
 	}
+
+	VECTOR2& Rotation = State->Model()->b_EditorMode ? State->Model()->EditorRotation() : State->Model()->Rotation();
+
+	bool b_QuickTurn = (State->Current() == Quick_Turn);
+	bool b_Reloading = (State->Current() == Reload || State->Current() == Quick_Reload);
+	bool b_AimBegin = (State->Current() == Aim_Begin || (State->Current() == Aim_Upward_Begin) || (State->Current() == Aim_Downward_Begin));
+	bool b_Aiming = (State->Current() == Aim) || (State->Current() == Aim_Upward) || (State->Current() == Aim_Downward);
+	bool b_Firing = (State->Current() == Fire) || (State->Current() == Fire_Upward) || (State->Current() == Fire_Downward);
 
 	bool b_Up = Gamepad->IsPressed(Gamepad->Map().Up);
 	bool b_Right = Gamepad->IsPressed(Gamepad->Map().Right);
 	bool b_Down = Gamepad->IsPressed(Gamepad->Map().Down);
 	bool b_Left = Gamepad->IsPressed(Gamepad->Map().Left);
+	bool b_Cross = Gamepad->IsPressed(Gamepad->Map().Cross);
+	bool b_Square = Gamepad->IsPressed(Gamepad->Map().Square);
+	bool b_R1 = Gamepad->IsPressed(Gamepad->Map().R1);
+
+	if (Aim_Begin.GetClip() == std::to_underlying(AnimStateCustom::Dummy))
+	{
+		b_R1 = false;
+	}
+
+	if (b_Right) { m_KeyState |= RIGHT; }
+	else if (b_Left) { m_KeyState |= LEFT; }
+	if (b_Up) { m_KeyState |= UP; }
+	else if (b_Down) { m_KeyState |= DOWN; }
 
 	if (b_Right || b_Left)
 	{
-		if (b_AimBegin || b_Aiming || b_Firing) { Rotation.y += (b_Right ? 12 : -12); }
+		if (b_Reloading)
+		{
+		}
+
+		else if (b_AimBegin || b_Aiming || b_Firing) { Rotation.y += (b_Right ? 8 : -8); }
 
 		else { Rotation.y += (b_Right ? 16 : -16); }
 
-		Model->ClampRotation(Rotation);
+		State->Model()->ClampRotation(Rotation);
 	}
 
-	if (Model->b_IdleTurn.load() && (b_Up || b_Down))
+	if (b_R1)
 	{
-		Model->ResetFrame(Bio2PlayerState::Idle);
-		Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, 0, false, true);
-		Model->b_IdleTurn.store(false);
-	}
+		m_KeyState |= AIM;
 
-	if (Gamepad->IsPressed(Gamepad->Map().R1))
+		if (b_Aiming || b_Firing)
+		{
+			if (b_Cross) { m_KeyState |= AIM_FIRE; }
+			else if (b_Square) { m_KeyState |= RUN; }
+		}
+	}
+	else if (b_Up || b_Down)
 	{
-		bool b_Cross = Gamepad->IsPressed(Gamepad->Map().Cross);
+		if (State->Model()->ModelGame() & (AUG95 | OCT95 | BIO1 | BIO2NOV96))
+		{
+			if (b_Up && !b_Square && Walk_Forward.GetClip() == std::to_underlying(AnimStateCustom::Dummy)) // bio2 nov '96 is such a mess...
+			{
+				m_KeyState = NONE;
+			}
 
-		if (b_AimBegin || b_Firing)
-		{
+			static float WalkSpeed = 0.2150f;
+			float RunSpeed = WalkSpeed * 1.46f;
+
+			if (State->Model()->ModelGame() & BIO2NOV96)
+			{
+				RunSpeed = WalkSpeed * 1.58f;
+			}
+
+			auto CalcSpeed = [](Resident_Evil_Model& Model, const StateType& State, float Distance) -> std::int16_t
+				{
+					if (State.GetClip() == std::to_underlying(AnimStateCustom::Dummy))
+					{
+						return 0;
+					}
+
+					std::size_t nFrames = Model.Animation(State.GetIndex())->GetFrameCount(State.GetClip());
+
+					if (nFrames) { nFrames -= 1; }
+
+					if (nFrames <= 0)
+					{
+						return static_cast<std::int16_t>(Distance * 4096.0f / 60.0f);
+					}
+
+					float Speed = (Distance / nFrames) * 4096.0f;
+
+					return static_cast<std::int16_t>(std::round(Speed));
+				};
+
+			if (b_Up || b_Down)
+			{
+				std::int16_t Speed = CalcSpeed(*State->Model(), Walk_Forward, WalkSpeed);
+				State->Model()->Speed().x += (b_Up ? -Speed : Speed);
+			}
+
+			if (b_Square)
+			{
+				if (b_Up || b_Down)
+				{
+					std::int16_t Speed = CalcSpeed(*State->Model(), Run, RunSpeed);
+					State->Model()->Speed().x += (b_Up ? -Speed : Speed);
+				}
+
+				m_KeyState |= RUN;
+			}
 		}
-		else if (b_Aiming && b_Cross && b_Up)
+
+		else if (b_Square)
 		{
-			Model->SetState(Bio2PlayerState::Fire_Upward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-			Model->b_PlayAllFrames.store(true);
-		}
-		else if (b_Aiming && b_Cross && b_Down)
-		{
-			Model->SetState(Bio2PlayerState::Fire_Downward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-			Model->b_PlayAllFrames.store(true);
-		}
-		else if (b_Aiming && b_Cross)
-		{
-			Model->SetState(Bio2PlayerState::Fire, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-			Model->b_PlayAllFrames.store(true);
-		}
-		else if (b_Aiming && b_Up)
-		{
-			Model->SetState(Bio2PlayerState::Aim_Upward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-		}
-		else if (b_Aiming && b_Down)
-		{
-			Model->SetState(Bio2PlayerState::Aim_Downward, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-		}
-		else if (b_Aiming)
-		{
-			Model->SetState(Bio2PlayerState::Aim, AnimationIndex::Weapon, Model->iFrame.load(), true, true);
-		}
-		else if (!b_Aiming || !b_AimBegin)
-		{
-			Model->SetState(Bio2PlayerState::Aim_Begin, AnimationIndex::Weapon, 0, true, false);
-			Model->SetNextState(Bio2PlayerState::Aim, AnimationIndex::Weapon);
-			Model->b_PlayAllFrames.store(true);
+			m_KeyState |= RUN;
 		}
 	}
-	else if (b_AimBegin || b_Aiming || b_Firing)
+
+	bool b_UpdateTransform = !(m_KeyState == NONE || State->Model()->b_EditorMode || State->Model()->b_IdleTurn.load() || b_AimBegin || b_Aiming || b_QuickTurn || b_Reloading);
+
+	if (b_Firing && (!State->Model()->b_WeaponKickback.load() || State->Model()->b_WeaponKickbackComplete.load()))
 	{
-		Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
-	}
-	else if (b_Up)
-	{
-		if (Gamepad->IsPressed(Gamepad->Map().Square))
-		{
-			Model->ResetFrame(Bio2PlayerState::Run);
-			Model->SetState(Bio2PlayerState::Run, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
-		}
-		else
-		{
-			Model->ResetFrame(Bio2PlayerState::Walk_Forward);
-			Model->SetState(Bio2PlayerState::Walk_Forward, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
-		}
-	}
-	else if (b_Running)
-	{
-		Model->RecoverState(b_AimBegin, b_Aiming, b_Firing, b_Running);
-	}
-	else if (b_Down)
-	{
-		Model->ResetFrame(Bio2PlayerState::Walk_Backward);
-		Model->SetState(Bio2PlayerState::Walk_Backward, AnimationIndex::Normal, Model->iFrame.load(), false, true);
-
-		if (Gamepad->IsPressed(Gamepad->Map().Square))
-		{
-			Model->b_QuickTurn.store(true);
-			Model->m_QuickTurnRotation.store(2048);
-			return;
-		}
-	}
-	else if (b_Right || b_Left)
-	{
-		Model->ResetFrame(Bio2PlayerState::Walk_Backward);
-		Model->SetState(Bio2PlayerState::Walk_Backward, AnimationIndex::Normal, Model->iFrame.load(), false, true);
-		Model->b_IdleTurn.store(true);
+		b_UpdateTransform = false;
 	}
 
-	if (!Model->b_IdleTurn.load() && !b_AimBegin && !b_Aiming && !Model->b_EditorMode)
-	{
-		if (b_Firing && !Model->b_WeaponKickback) { return; }
-
-		auto& Animation = Model->Animation(Model->AnimIndex());
-
-		auto iClip = min(Model->iClip.load(), Animation->GetClipCount() - 1);
-
-		auto iFrame = min(Model->iFrame.load(), Animation->GetFrameCount(iClip) - 1);
-
-		if (Animation->Clip.empty())
-		{
-			Model->ResetFrame(Bio2PlayerState::Idle);
-			Model->SetState(Bio2PlayerState::Idle, AnimationIndex::Weapon, Model->iFrame.load(), false, true);
-			return;
-		}
-
-		auto& Frame = Animation->Clip[iClip][iFrame];
-
-		if (!iFrame) { Model->Speed() = {}; }
-
-		SVECTOR2 Delta{ (Frame.Speed.x - Model->Speed().x), (Frame.Speed.y - Model->Speed().y), (Frame.Speed.z - Model->Speed().z) };
-
-		Model->Speed() = { Frame.Speed.x, Frame.Speed.y, Frame.Speed.z };
-
-		Model->AddSpeedXZ((SVECTOR*)&Delta);
-
-		Model->ClampPosition(Model->Position());
-	}
-
+	State->Update(m_KeyState, b_UpdateTransform);
 }

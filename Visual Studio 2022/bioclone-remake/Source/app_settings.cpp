@@ -29,7 +29,7 @@ void Global_Application::TooltipOnHover(String Tip)
 	}
 }
 
-bool Global_Application::ScrollOnHover(void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete) const
+const bool Global_Application::ScrollOnHover(void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete) const
 {
 	if (ImGui::GetIO().MouseWheel == 0.0f) { return false; }
 
@@ -85,7 +85,7 @@ bool Global_Application::ScrollOnHover(void* Input, ImGuiDataType DataType, std:
 	return false;
 }
 
-bool Global_Application::ScrollFloatOnHover(void* Input, ImGuiDataType DataType, double Step, double Min, double Max, std::function<void(void)> OnComplete) const
+const bool Global_Application::ScrollFloatOnHover(void* Input, ImGuiDataType DataType, double Step, double Min, double Max, std::function<void(void)> OnComplete) const
 {
 	if (ImGui::GetIO().MouseWheel == 0.0f) { return false; }
 
@@ -121,7 +121,7 @@ bool Global_Application::ScrollFloatOnHover(void* Input, ImGuiDataType DataType,
 	return false;
 }
 
-bool Global_Application::ScrollComboOnHover(String ID, void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete) const
+const bool Global_Application::ScrollComboOnHover(String ID, void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete) const
 {
 	if (ImGui::GetIO().MouseWheel == 0.0f) { return false; }
 

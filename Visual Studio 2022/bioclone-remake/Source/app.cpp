@@ -45,7 +45,7 @@ void Global_Application::Controls(void) const
 	Window->MessageModal(L"Controls", L"", Str.GetWide(ControlsStr));
 }
 
-void Global_Application::SetMaxRenderSize(uint32_t MaxWidth, uint32_t MaxHeight)
+void Global_Application::SetMaxRenderSize(const uint32_t MaxWidth, const uint32_t MaxHeight)
 {
 	b_SetMaxRenderSize = false;
 
@@ -105,6 +105,15 @@ void Global_Application::RenderScene(void)
 		DrawFloor();
 
 		Player->Routine();
+
+		if (IsPanelType(PanelType::RoomModel) && !b_FileOp.load() && Model.get() && Model != Player)
+		{
+			Render->SetPSXLightToggle(b_PerPixelLighting, !b_PerPixelLighting && !b_PerVertexLighting ? true : false);
+
+			Model->Draw();
+
+			Render->SetPSXLightToggle(true, false);
+		}
 	}
 
 	{
@@ -222,52 +231,38 @@ void Global_Application::Input(void)
 		b_RequestFullscreen = true;
 	}
 
-	if (!ImGui::GetKeyData(ImGuiKey_DownArrow)->DownDuration)
-	{
-	}
-
-	if (!ImGui::GetKeyData(ImGuiKey_UpArrow)->DownDuration)
-	{
-	}
-
 	if (!ImGui::GetKeyData(ImGuiKey_LeftArrow)->DownDuration)
 	{
-		if (ImGui::GetIO().KeyCtrl && Player->Animation(Player->AnimIndex())->IsOpen())
+		if (ImGui::GetIO().KeyCtrl && Camera->b_ViewEditor && Player->Animation(Player->AnimIndex())->IsOpen())
 		{
 			Player->iClip--;
 			Player->iFrame = 0;
 		}
-		else if (!Player->b_EditorMode)
+		else if (Room->IsOpen() && !Camera->b_ViewTopDown && !Camera->b_ViewEditor)
 		{
-			if (Room->IsOpen())
-			{
-				uintmax_t i = Camera->SetImage(--Camera->m_Cut);
-				Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
-				SetLighting();
-			}
+			uintmax_t i = Camera->SetImage(--Camera->m_Cut);
+			Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+			SetLighting();
 		}
 	}
 
 	if (!ImGui::GetKeyData(ImGuiKey_RightArrow)->DownDuration)
 	{
-		if (ImGui::GetIO().KeyCtrl && Player->Animation(Player->AnimIndex())->IsOpen())
+		if (ImGui::GetIO().KeyCtrl && Camera->b_ViewEditor && Player->Animation(Player->AnimIndex())->IsOpen())
 		{
 			Player->iClip++;
 			Player->iFrame = 0;
 		}
-		else if (!Player->b_EditorMode)
+		else if (Room->IsOpen() && !Camera->b_ViewTopDown && !Camera->b_ViewEditor)
 		{
-			if (Room->IsOpen())
-			{
-				uintmax_t i = Camera->SetImage(++Camera->m_Cut);
-				Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
-				SetLighting();
-			}
+			uintmax_t i = Camera->SetImage(++Camera->m_Cut);
+			Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+			SetLighting();
 		}
 	}
 }
 
-void Global_Application::SetController(bool b_OnOff)
+void Global_Application::SetController(const bool b_OnOff)
 {
 	Player->b_ControllerMode = b_OnOff;
 
@@ -281,33 +276,11 @@ void Global_Application::SetController(bool b_OnOff)
 	Player->b_LockPosition = true;
 	Player->b_DrawReference = false;
 
-	if (Player->ModelGame() & (AUG95 | OCT95 | BIO1) && Player->WeaponModelGame() & (AUG95 | OCT95 | BIO1))
-	{
-		InitPlayerStateBio1(Player, m_PlayerState);
-	}
-	else if (Player->ModelGame() & BIO2NOV96 && Player->WeaponModelGame() & BIO2NOV96)
-	{
-		InitPlayerStateBio2Nov96(Player, m_PlayerState);
-	}
-	else if (Player->ModelGame() & (BIO2TRIAL | BIO2) && Player->WeaponModelGame() & (BIO2TRIAL | BIO2))
-	{
-		InitPlayerStateBio2(Player, m_PlayerState);
-	}
+	InitPlayerState(Player, m_PlayerState);
 
 	Player->Controller = [this]() -> void
 		{
-			if (Player->ModelGame() & (AUG95 | OCT95 | BIO1) && Player->WeaponModelGame() & (AUG95 | OCT95 | BIO1))
-			{
-				ControllerInputBio1(m_PlayerState);
-			}
-			else if (Player->ModelGame() & BIO2NOV96 && Player->WeaponModelGame() & BIO2NOV96)
-			{
-				ControllerInputBio2Nov96(m_PlayerState);
-			}
-			else if (Player->ModelGame() & (BIO2TRIAL | BIO2) && Player->WeaponModelGame() & (BIO2TRIAL | BIO2))
-			{
-				ControllerInputBio2(m_PlayerState);
-			}
+			ControllerInput(m_PlayerState);
 		};
 }
 
@@ -354,8 +327,8 @@ void Global_Application::InitWin32(HINSTANCE hInstance)
 	extern LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 	extern LRESULT CALLBACK RenderProc(HWND, UINT, WPARAM, LPARAM);
 
-	int DefaultWidth = 1920;
-	int DefaultHeight = 1080;
+	constexpr int DefaultWidth = 1920;
+	constexpr int DefaultHeight = 1080;
 
 	if (b_BootMaximized)
 	{
@@ -411,7 +384,10 @@ void Global_Application::InitWin32(HINSTANCE hInstance)
 		Window->AutoFullscreen();
 	}
 
-	else { ShowWindow(Window->Get(), SW_SHOWDEFAULT); }
+	else
+	{
+		ShowWindow(Window->Get(), SW_SHOWDEFAULT);
+	}
 }
 
 void Global_Application::InitImGuiColor(void)
@@ -481,7 +457,7 @@ void Global_Application::InitImGui(void)
 	ImGui_ImplDX9_Init(Render->Device());
 }
 
-void Global_Application::InitRender(uint32_t Width, uint32_t Height)
+void Global_Application::InitRender(const uint32_t Width, const uint32_t Height)
 {
 	m_RequestWidth = m_RenderWidth = Width;
 	m_RequestHeight = m_RenderHeight = Height;
@@ -525,6 +501,8 @@ void Global_Application::InitGame(void)
 
 		Player->Routine = [this]() -> void
 			{
+				if (!Player->b_Active.load() || b_FileOp.load()) { return; }
+
 				Player->Controller();
 
 				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
@@ -569,10 +547,9 @@ void Global_Application::Shutdown(void)
 
 	Modal = []() {};
 
-	if (b_ControllerMapping.load() || b_RoomcutExtraction.load())
+	if (b_ModalOp.load())
 	{
-		b_ControllerMapping.store(false);
-		b_RoomcutExtraction.store(false);
+		b_ModalOp.store(false);
 
 		auto StartTime = std::chrono::steady_clock::now();
 
@@ -585,7 +562,7 @@ void Global_Application::Shutdown(void)
 
 	auto StartTime = std::chrono::steady_clock::now();
 
-	while (!ThreadPool.Stop())
+	while (!MainOp.Stop())
 	{
 		std::this_thread::yield();
 		if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
@@ -640,7 +617,7 @@ int Global_Application::Main(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWST
 
 		Window->ChronoTimerInit(59.94);
 
-		ThreadPool.Enqueue([this]()
+		MainOp.Enqueue([this]()
 			{
 				if (!b_Active || Window->IsMinimized() || !Render->NormalState() || !Context) { return; }
 

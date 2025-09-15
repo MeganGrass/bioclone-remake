@@ -7,18 +7,21 @@
 
 #include "app.h"
 
-bool Global_Application::IsRoomOpen(void)
+const bool Global_Application::IsRoomOpen(void)
 {
-	if (b_RoomFileOp) { return false; }
+	if (b_FileOp.load() || Camera->b_ViewEditor) { return false; }
 
 	return Room->IsOpen();
 }
 
-void Global_Application::CloseRDT(void)
+void Global_Application::CloseRDT(const bool b_AskSave)
 {
 	if (!IsRoomOpen()) { return; }
 
-	if (Room->IsOpen() && Window->Question(L"Do you want to save the current RDT file?")) { SaveRDT(); }
+	if (b_AskSave && Room->IsOpen() && Window->Question(L"Do you want to save the current RDT file?"))
+	{
+		SaveRDT();
+	}
 
 	Camera->Reset();
 
@@ -31,9 +34,38 @@ void Global_Application::CloseRDT(void)
 	ResetLighting();
 }
 
-void Global_Application::OpenRDT(void)
+void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uintmax_t iCut)
 {
-	CloseRDT();
+	b_FileOp.store(true);
+
+	auto InitializeRoom = [&](const bool b_AskSave)
+		{
+			CloseRDT(b_AskSave);
+
+			Camera->m_Cx = GTE->ToFloat(Room->Sca->GetHeader()->Cx);
+			Camera->m_Cz = GTE->ToFloat(Room->Sca->GetHeader()->Cz);
+
+			Camera->SetMeta(Room->m_Path, Room->m_Stage, Room->m_Room, Room->GetCameraCount(), Room->m_Game);
+			Camera->SetImage(iCut);
+
+			if (!Camera->b_ViewTopDown && !Camera->b_ViewEditor)
+			{
+				Camera->Set(Room->Rid->Get(iCut)->ViewR >> 7, Room->Rid->Get(iCut)->View_p, Room->Rid->Get(iCut)->View_r);
+			}
+
+			Geometry->iObjectMax = Room->Sca->Count() ? Room->Sca->Count() - 1 : 0;
+
+			Player->SetRoomAnimations(Room->Rbj);
+
+			SetLighting();
+		};
+
+	if (!Filename.empty() && Standard_FileSystem().Exists(Filename) && Room->Open(Filename))
+	{
+		InitializeRoom(false);
+		b_FileOp.store(false);
+		return;
+	}
 
 	if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
 
@@ -41,37 +73,47 @@ void Global_Application::OpenRDT(void)
 	{
 		if (Room->Open(Filename.value()))
 		{
-			Camera->b_ViewTopDown = false;
-			Camera->b_ViewModelEdit = false;
-
-			Camera->m_Cx = GTE->ToFloat(Room->Sca->GetHeader()->Cx);
-			Camera->m_Cz = GTE->ToFloat(Room->Sca->GetHeader()->Cz);
-
-			Camera->SetMeta(Room->m_Path, Room->m_Stage, Room->m_Room, Room->GetCameraCount());
-			Camera->SetImage(0);
-			Camera->Set(Room->Rid->Get(0)->ViewR >> 7, Room->Rid->Get(0)->View_p, Room->Rid->Get(0)->View_r);
-
-			Geometry->iObjectMax = Room->Sca->Count() ? Room->Sca->Count() - 1 : 0;
-
-			SetLighting();
-
-			Player->SetRoomAnimations(Room->Rbj);
+			iCut = 0;
+			InitializeRoom(true);
 		}
 	}
 
 	CoUninitialize();
+
+	b_FileOp.store(false);
 }
 
 void Global_Application::SaveRDT(void)
 {
 }
 
-void Global_Application::OpenPlayerModel(std::filesystem::path Filename)
+void Global_Application::OpenModel(std::shared_ptr<Resident_Evil_Model>& Model, const bool b_LinkRoom, const std::filesystem::path Filename)
 {
-	if (!Filename.empty())
+	b_FileOp.store(true);
+
+	auto InitializeModel = [&](const std::filesystem::path Filename)
+		{
+			bool b_ControllerMode = Model->b_ControllerMode;
+
+			Model->Open(Filename);
+
+			if (b_LinkRoom)
+			{
+				Model->SetRoomAnimations(Room->Rbj);
+			}
+
+			if (b_ControllerMode && Model->b_WeaponChange)
+			{
+				Model->b_ControllerMode = true;
+				Model->b_WeaponChange = false;
+				SetController(Model->b_ControllerMode);
+			}
+		};
+
+	if (!Filename.empty() && Standard_FileSystem().Exists(Filename))
 	{
-		Player->Open(Filename);
-		Player->SetRoomAnimations(Room->Rbj);
+		InitializeModel(Filename);
+		b_FileOp.store(false);
 		return;
 	}
 
@@ -82,18 +124,21 @@ void Global_Application::OpenPlayerModel(std::filesystem::path Filename)
 		{ L"*.tmd;*.md1;*.md2;*.pld;*.emd;*.emw;*.plw", L"*.tmd;*.md1;*.md2", L"*.emd;*.pld", L"*.emd", L"*.emw;*.plw" }
 	); Filename.has_value())
 	{
-		Player->Open(Filename.value());
-		Player->SetRoomAnimations(Room->Rbj);
+		InitializeModel(Filename.value());
 	}
 
 	CoUninitialize();
+
+	b_FileOp.store(false);
 }
 
-void Global_Application::OpenPlayerTexture(std::filesystem::path Filename)
+void Global_Application::OpenModelTexture(std::shared_ptr<Resident_Evil_Model>& Model, const std::filesystem::path Filename)
 {
-	if (!Filename.empty())
+	b_FileOp.store(true);
+
+	if (!Filename.empty() && Standard_FileSystem().Exists(Filename) && Model->OpenTexture(Filename))
 	{
-		Player->OpenTexture(Filename);
+		b_FileOp.store(false);
 		return;
 	}
 
@@ -104,13 +149,15 @@ void Global_Application::OpenPlayerTexture(std::filesystem::path Filename)
 		{ L"*.tim;*.bmp;*.png;*.jpg;*.jpeg", L"*.tim", L"*.bmp", L"*.png", L"*.jpg;*.jpeg" }
 	); Filename.has_value())
 	{
-		Player->OpenTexture(Filename.value());
+		Model->OpenTexture(Filename.value());
 	}
 
 	CoUninitialize();
+
+	b_FileOp.store(false);
 }
 
-void Global_Application::SavePlayerTexture(void)
+void Global_Application::SaveModelTexture(std::shared_ptr<Resident_Evil_Model>& Model)
 {
 	if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
 
@@ -126,46 +173,46 @@ void Global_Application::SavePlayerTexture(void)
 
 		if (Standard_String().ToUpper(Extension) == ".TIM")
 		{
-			Player->Texture()->SaveTIM(Filename.value());
+			Model->Texture()->SaveTIM(Filename.value());
 		}
 		if (Standard_String().ToUpper(Extension) == ".BMP")
 		{
-			if (Player->Texture()->GetPaletteCount())
+			if (Model->Texture()->GetPaletteCount())
 			{
-				for (uint16_t i = 0; i < Player->Texture()->GetPaletteCount(); i++)
+				for (uint16_t i = 0; i < Model->Texture()->GetPaletteCount(); i++)
 				{
 					std::filesystem::path PaletteFilename = Dir / Stem += L"_" + std::to_wstring(i) + L".bmp";
-					Player->Texture()->SaveBMP(PaletteFilename, 0, i);
+					Model->Texture()->SaveBMP(PaletteFilename, 0, i);
 				}
 			}
-			else { Player->Texture()->SaveBMP(Filename.value()); }
+			else { Model->Texture()->SaveBMP(Filename.value()); }
 		}
 #ifdef LIB_PNG
 		if (Standard_String().ToUpper(Extension) == ".PNG")
 		{
-			if (Player->Texture()->GetPaletteCount())
+			if (Model->Texture()->GetPaletteCount())
 			{
-				for (uint16_t i = 0; i < Player->Texture()->GetPaletteCount(); i++)
+				for (uint16_t i = 0; i < Model->Texture()->GetPaletteCount(); i++)
 				{
 					std::filesystem::path PaletteFilename = Dir / Stem += L"_" + std::to_wstring(i) + L".png";
-					Player->Texture()->SavePNG(PaletteFilename, 0, i);
+					Model->Texture()->SavePNG(PaletteFilename, 0, i);
 				}
 			}
-			else { Player->Texture()->SavePNG(Filename.value()); }
+			else { Model->Texture()->SavePNG(Filename.value()); }
 		}
 #endif
 #ifdef LIB_JPEG
 		if ((Standard_String().ToUpper(Extension) == ".JPG" || Standard_String().ToUpper(Extension) == ".JPEG"))
 		{
-			if (Player->Texture()->GetPaletteCount())
+			if (Model->Texture()->GetPaletteCount())
 			{
-				for (uint16_t i = 0; i < Player->Texture()->GetPaletteCount(); i++)
+				for (uint16_t i = 0; i < Model->Texture()->GetPaletteCount(); i++)
 				{
 					std::filesystem::path PaletteFilename = Dir / Stem += L"_" + std::to_wstring(i) + L".jpg";
-					Player->Texture()->SaveJPEG(PaletteFilename, 0, i);
+					Model->Texture()->SaveJPEG(PaletteFilename, 0, i);
 				}
 			}
-			else { Player->Texture()->SaveJPEG(Filename.value()); }
+			else { Model->Texture()->SaveJPEG(Filename.value()); }
 		}
 #endif
 	}

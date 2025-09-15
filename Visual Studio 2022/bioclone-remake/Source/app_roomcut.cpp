@@ -16,13 +16,13 @@ void Global_Application::RoomcutExtract(std::filesystem::path Filename)
 	auto ThreadWork = std::thread([This, Filename]()
 		{
 			This->m_RoomcutProgress = 0.0f;
-			This->b_RoomcutExtraction.store(true);
+			This->b_ModalOp.store(true);
 
 			std::function<void(float, bool&, std::filesystem::path)> Callback =
 				[&](float Progress, bool& b_Status, std::filesystem::path CurrentID) -> void
 				{
 					This->m_RoomcutProgress = Progress;
-					b_Status = This->b_RoomcutExtraction.load();
+					b_Status = This->b_ModalOp.load();
 					This->m_RoomcutNameID = CurrentID;
 				};
 
@@ -47,13 +47,15 @@ void Global_Application::RoomcutModal(void)
 		ImGui::OpenPopup("roomcut.bin##RoomcutModal");
 	}
 
+	b_FileOp.store(true);
+
 	ImGui::SetNextWindowPos(ImVec2((ImGui::GetIO().DisplaySize.x - ImGui::GetWindowSize().x) / 2, (ImGui::GetIO().DisplaySize.y - ImGui::GetWindowSize().y) / 1.5f));
 
 	if (ImGui::BeginPopupModal("roomcut.bin##RoomcutModal", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove))
 	{
 		if (m_RoomcutProgress >= 1.0f)
 		{
-			b_RoomcutExtraction.store(false);
+			b_ModalOp.store(false);
 			Modal = []() {};
 			ImGui::CloseCurrentPopup();
 		}
@@ -75,7 +77,7 @@ void Global_Application::RoomcutModal(void)
 
 		if (ImGui::Button("Cancel##RoomcutModal", ImVec2(ButtonWidth, ButtonHeight)))
 		{
-			b_RoomcutExtraction.store(false);
+			b_ModalOp.store(false);
 			Modal = []() {};
 			ImGui::CloseCurrentPopup();
 		}
@@ -88,7 +90,9 @@ void Global_Application::RoomcutModal(void)
 
 void Global_Application::OnRoomcutComplete(std::filesystem::path Directory)
 {
-	b_RoomcutExtraction = false;
+	b_ModalOp.store(false);
+
+	b_FileOp.store(false);
 
 	Modal = []() {};
 

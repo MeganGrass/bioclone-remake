@@ -9,27 +9,25 @@
 
 void Global_Application::DrawBackground(void)
 {
-	if (!IsRoomOpen()) { return; }
-	if (!Camera->b_ViewTopDown && !Camera->b_ViewModelEdit && Camera->b_ViewBackground && Camera->m_Background)
-	{
+	if (!IsRoomOpen() || Camera->b_ViewTopDown || !Camera->b_ViewBackground || !Camera->m_Background) { return; }
+
 #if MSTD_DX9
-		Render->SetDepthScale(1.0f, 1.0f);
+	Render->SetDepthScale(1.0f, 1.0f);
 
-		Render->AlphaBlending(FALSE, D3DBLEND_ZERO, D3DBLEND_ZERO);
+	Render->AlphaBlending(FALSE, D3DBLEND_ZERO, D3DBLEND_ZERO);
 
-		Render->AlphaTesting(FALSE, 0x00, D3DCMP_NEVER);
+	Render->AlphaTesting(FALSE, 0x00, D3DCMP_NEVER);
 
-		Render->DrawVec4t(
-			Camera->m_BackgroundVert.get(), Camera->m_Background.get(), Render->PassthroughPixelShader.get(),
-			Camera->m_TexWidth, Camera->m_TexHeight,
-			(D3DXMATRIX*)Camera->Orthogonal.get());
-	}
+	Render->DrawVec4t(
+		Camera->m_BackgroundVert.get(), Camera->m_Background.get(), Render->PassthroughPixelShader.get(),
+		Camera->m_TexWidth, Camera->m_TexHeight,
+		(D3DXMATRIX*)Camera->Orthogonal.get());
 #endif
 }
 
 void Global_Application::DrawCamera(void)
 {
-	if (!Camera->b_DrawLine || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Camera->b_DrawLine) { return; }
 
 	std::vector<vec3> Shape;
 
@@ -82,7 +80,7 @@ void Global_Application::DrawCamera(void)
 
 void Global_Application::DrawSprite(void)
 {
-	if (Camera->b_ViewTopDown || Camera->b_ViewModelEdit || !Camera->b_ViewSprite || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || Camera->b_ViewTopDown || !Camera->b_ViewSprite) { return; }
 
 	{
 		Render->SetDepthScale(-1.013f, -2048.000f);
@@ -151,7 +149,7 @@ void Global_Application::DrawSprite(void)
 
 void Global_Application::DrawSwitch(void)
 {
-	if (!Camera->b_DrawSwitch || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Camera->b_DrawSwitch) { return; }
 
 	for (std::size_t i = 0; i < Room->Rvd->Count(); i++)
 	{
@@ -164,7 +162,7 @@ void Global_Application::DrawSwitch(void)
 
 void Global_Application::DrawCollision(void)
 {
-	if (!Geometry->b_DrawCollision || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Geometry->b_DrawCollision) { return; }
 
 	for (std::size_t i = 0; i < Room->Sca->Count(); i++)
 	{
@@ -213,7 +211,7 @@ void Global_Application::DrawCollision(void)
 
 void Global_Application::DrawBlock(void)
 {
-	if (!Geometry->b_DrawBlock || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Geometry->b_DrawBlock) { return; }
 
 	for (std::size_t i = 0; i < Room->Blk->Count(); i++)
 	{
@@ -226,7 +224,7 @@ void Global_Application::DrawBlock(void)
 
 void Global_Application::DrawFloor(void)
 {
-	if (!Geometry->b_DrawFloor || Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Geometry->b_DrawFloor) { return; }
 
 	for (std::size_t i = 0; i < Room->Flr->Count(); i++)
 	{
@@ -284,9 +282,7 @@ void Global_Application::SetLighting(void)
 
 void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox)
 {
-	if (!Geometry->b_CollisionDetection) { return; }
-
-	if (Camera->b_ViewModelEdit || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Geometry->b_CollisionDetection) { return; }
 
 	for (std::size_t i = 0; i < Room->Sca->Count(); i++)
 	{
@@ -322,7 +318,7 @@ void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEV
 
 void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 {
-	if (!Geometry->b_SwitchDetection || !IsRoomOpen()) { return; }
+	if (!IsRoomOpen() || !Geometry->b_SwitchDetection) { return; }
 
 	auto& Data = Room->Rvd->data();
 
@@ -333,11 +329,6 @@ void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 		if (!Data[i].Be_flg || (Data[i].Fcut != Camera->m_Cut)) { continue; }
 
 		if (Data[i].Tcut == 0 && !b_FirstInstance) { b_FirstInstance = true; continue; }
-
-		if (Room->GameType() & (AUG95 | OCT95 | BIO1))
-		{
-			if (Data[i].Tcut == 9) { continue; }
-		}
 
 		if (Data[i].Fcut == Camera->m_Cut)
 		{

@@ -144,9 +144,7 @@
     <ClCompile Include="..\..\sony-lib\sony_texture_2_str.cpp" />
     <ClCompile Include="Source\app.cpp" />
     <ClCompile Include="Source\app_config.cpp" />
-    <ClCompile Include="Source\app_controller_bio1.cpp" />
-    <ClCompile Include="Source\app_controller_bio2.cpp" />
-    <ClCompile Include="Source\app_controller_bio2nov96.cpp" />
+    <ClCompile Include="Source\app_controller.cpp" />
     <ClCompile Include="Source\app_draw.cpp" />
     <ClCompile Include="Source\app_edit_collision.cpp" />
     <ClCompile Include="Source\app_edit_model.cpp" />
@@ -207,6 +205,8 @@
     <ClInclude Include="..\..\bio-lib\Common\animation\bio2_anim_state.h" />
     <ClInclude Include="..\..\bio-lib\Common\animation\bio2_anim_state_nov96.h" />
     <ClInclude Include="..\..\bio-lib\Common\animation\bio3_anim_state.h" />
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio_state.h" />
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio_state_machine.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_camera.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_common.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h" />
@@ -214,7 +214,6 @@
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_model.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_room.h" />
-    <ClInclude Include="..\..\bio-lib\Common\bio_state_machine.h" />
     <ClInclude Include="..\..\bio-lib\Disc\bio_disk.h" />
     <ClInclude Include="..\..\mstd-lib\DX9\std_dx9.h" />
     <ClInclude Include="..\..\mstd-lib\Geometry\std_matrix.h" />

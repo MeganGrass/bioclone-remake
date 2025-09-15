@@ -26,6 +26,14 @@ typedef class Global_Application Global;
 
 extern std::unique_ptr<Global_Application> G;
 
+enum class PanelType : std::int32_t
+{
+	Pers3D = (1 << 0),
+	Top2D = (1 << 1),
+	CharacterModel = (1 << 2),
+	RoomModel = (1 << 3),
+};
+
 class Global_Application final :
 	public Resident_Evil_Common {
 private:
@@ -65,24 +73,27 @@ private:
 	bool b_PerVertexLighting;
 	bool b_PerPixelLighting;
 
+	PanelType m_PanelType;
+
+	Standard_Thread_Pool MainOp;
+
 	std::function<void()> Modal;
+	std::atomic<bool> b_ModalOp;
 
-	Standard_Thread_Pool ThreadPool;
+	Standard_Thread_Pool FileOp;
+	std::atomic<bool> b_FileOp;
 
-	Standard_Thread_Pool FilePool;
-	bool b_RoomFileOp;
-
-	std::atomic<bool> b_RoomcutExtraction;
 	std::filesystem::path m_RoomcutNameID;
 	float m_RoomcutProgress;
 
-	std::atomic<bool> b_ControllerMapping;
 	std::unique_ptr<Resident_Evil_Gamepad> Gamepad;
+
+	static std::shared_ptr<Resident_Evil_Model> Model;
 
 	std::filesystem::path m_BootPlayerFilename;
 	std::filesystem::path m_BootWeaponFilename;
 	std::shared_ptr<Resident_Evil_Model> Player;
-	std::unique_ptr<StateMachineVariant> m_PlayerState;
+	std::unique_ptr<StateMachineType> m_PlayerState;
 
 	std::unique_ptr<Resident_Evil_Geometry> Geometry;
 
@@ -102,9 +113,9 @@ private:
 
 	void Tooltip(String Tip);
 	void TooltipOnHover(String Tip);
-	bool ScrollOnHover(void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete = [&]() {}) const;
-	bool ScrollFloatOnHover(void* Input, ImGuiDataType DataType, double Step, double Min, double Max, std::function<void(void)> OnComplete = [&]() {}) const;
-	bool ScrollComboOnHover(String ID, void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete = [&]() {}) const;
+	const bool ScrollOnHover(void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete = [&]() {}) const;
+	const bool ScrollFloatOnHover(void* Input, ImGuiDataType DataType, double Step, double Min, double Max, std::function<void(void)> OnComplete = [&]() {}) const;
+	const bool ScrollComboOnHover(String ID, void* Input, ImGuiDataType DataType, std::uintmax_t Step, std::uintmax_t Min, std::uintmax_t Max, std::function<void(void)> OnComplete = [&]() {}) const;
 	void DrawHorizontalLine(float HorizontalIndent, float VerticalIndent, float Thickness, float Red, float Green, float Blue, float Alpha = 1.0f);
 	void DrawVerticalLine(float HorizontalIndent, float VerticalIndent, float Thickness, float Red, float Green, float Blue, float Alpha = 1.0f);
 
@@ -112,24 +123,27 @@ private:
 	void RoomcutModal(void);
 	void OnRoomcutComplete(std::filesystem::path Directory);
 
-	bool IsRoomOpen(void);
-	void CloseRDT(void);
-	void OpenRDT(void);
+	const bool IsRoomOpen(void);
+	void CloseRDT(const bool b_AskSave = false);
+	void OpenRDT(const std::filesystem::path Filename = L"", std::uintmax_t iCut = 0);
 	void SaveRDT(void);
-	void OpenPlayerModel(std::filesystem::path Filename = L"");
-	void OpenPlayerTexture(std::filesystem::path Filename = L"");
-	void SavePlayerTexture(void);
+	void OpenModel(std::shared_ptr<Resident_Evil_Model>& Model, const bool b_LinkRoom, const std::filesystem::path Filename = L"");
+	void OpenModelTexture(std::shared_ptr<Resident_Evil_Model>& Model, const std::filesystem::path Filename = L"");
+	void SaveModelTexture(std::shared_ptr<Resident_Evil_Model>& Model);
 	void Screenshot(void);
 
 	void CollisionEditor(void);
-	void ModelEditor(void);
+	void ModelEditor(const bool b_RoomModel);
 
-	void InitPlayerStateBio1(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
-	void ControllerInputBio1(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
-	void InitPlayerStateBio2Nov96(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
-	void ControllerInputBio2Nov96(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
-	void InitPlayerStateBio2(std::shared_ptr<Resident_Evil_Model> iModel, std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
-	void ControllerInputBio2(std::unique_ptr<StateMachineVariant>& iStateMachineVariant);
+	void InitCommonStateBio1(std::uintmax_t iWeapon);
+	void InitWeaponStateBio1(std::uintmax_t iWeapon);
+	void InitCommonStateBio2Nov96(std::uintmax_t iWeapon);
+	void InitWeaponStateBio2Nov96(std::uintmax_t iWeapon);
+	void InitCommonStateBio2(std::uintmax_t iWeapon);
+	void InitWeaponStateBio2(std::uintmax_t iWeapon);
+
+	void InitPlayerState(std::shared_ptr<Resident_Evil_Model> Model, std::unique_ptr<StateMachineType>& State);
+	void ControllerInput(std::unique_ptr<StateMachineType>& State);
 
 	void DrawBackground(void);
 	void DrawCamera(void);
@@ -147,18 +161,21 @@ private:
 	void Options(void);
 	void ControllerMapping(void);
 	void RenderWindow(void);
+	void SetCenterPanel(PanelType Type);
 	void LeftPanel(ImVec2 Position, ImVec2 Size);
 	void CenterPanel(ImVec2 Position, ImVec2 Size);
 	void RightPanel(ImVec2 Position, ImVec2 Size);
+	void MouseCamera(VECTOR2& Eye, VECTOR2& At, bool b_Editor = true);
+	const bool IsPanelType(PanelType Type) const { return (static_cast<std::int32_t>(m_PanelType) & static_cast<std::int32_t>(Type)) != 0; }
 
 	void About(void) const;
 	void Controls(void) const;
-	void SetMaxRenderSize(uint32_t MaxWidth, uint32_t MaxHeight);
+	void SetMaxRenderSize(const uint32_t MaxWidth, const uint32_t MaxHeight);
 	void RenderScene(void);
 	void Draw(void);
 	void Input(void);
-	void SetController(bool b_OnOff);
-	void InitRender(uint32_t Width, uint32_t Height);
+	void SetController(const bool b_OnOff);
+	void InitRender(const uint32_t Width, const uint32_t Height);
 	void InitGame(void);
 	void InitImGuiColor(void);
 	void InitImGui(void);
@@ -191,6 +208,7 @@ public:
 		Gamepad{ std::make_unique<Resident_Evil_Gamepad>() },
 		Player{ std::make_shared<Resident_Evil_Model>() },
 		Room{ std::make_shared<Resident_Evil_Room>() },
+		m_PanelType(PanelType::Pers3D),
 		m_ConfigStr(),
 		m_BorderColor{},
 		m_CaptionColor{},
@@ -223,14 +241,13 @@ public:
 		b_Shutdown(false),
 		b_PerVertexLighting(false),
 		b_PerPixelLighting(false),
-		b_RoomFileOp(false),
 		m_RoomcutProgress(0.0f),
-		b_RoomcutExtraction(false),
-		b_ControllerMapping(false),
 		b_Active(true)
 	{
-		ThreadPool.InitPool(1);
-		FilePool.InitPool(1);
+		b_ModalOp.store(false);
+		b_FileOp.store(false);
+		MainOp.InitPool(1);
+		FileOp.InitPool(1);
 		Camera = std::make_unique<Resident_Evil_Camera>(Render, GTE);
 		Geometry = std::make_unique<Resident_Evil_Geometry>(Render, GTE);
 		Modal = [&]() {};

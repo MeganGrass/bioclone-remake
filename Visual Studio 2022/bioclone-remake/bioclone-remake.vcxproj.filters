@@ -565,17 +565,11 @@
     <ClCompile Include="..\..\mstd-lib\XInput\std_xinput.cpp">
       <Filter>Standard\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="Source\app_controller_bio2.cpp">
+    <ClCompile Include="Source\app_controller.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp">
       <Filter>BioHazard\Common</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\app_controller_bio1.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\app_controller_bio2nov96.cpp">
-      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp">
       <Filter>BioHazard\Common</Filter>
@@ -930,9 +924,6 @@
     <ClInclude Include="..\..\bio-lib\Common\animation\bio2_anim_state.h">
       <Filter>BioHazard\Common\Animation</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\bio-lib\Common\bio_state_machine.h">
-      <Filter>BioHazard\Common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\bio-lib\Common\animation\bio1_anim_state.h">
       <Filter>BioHazard\Common\Animation</Filter>
     </ClInclude>
@@ -974,6 +965,12 @@
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2_Nov96\RDT\bio2_nov96_rdt.h">
       <Filter>BioHazard\Bio1.5\RDT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio_state.h">
+      <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\animation\bio_state_machine.h">
+      <Filter>BioHazard\Common\Animation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
