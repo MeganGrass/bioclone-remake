@@ -23,7 +23,7 @@ Background and Mask images must be located in same directory as RDT
 ## Gameplay Testing
  - Requires XInput compatible controller
  - Button map assignment via main menu (View -> Controller Map)
- - Character Model (EMD/PLD) and Weapon (EMW/PLW) both must be open
+ - Character Model (EMD/PLD) and Weapon (EMW/PLW) both must be open -- Bio1 (all versions) and Bio2 (all versions) fully supported
  - Character Models and Weapons both must be from same game (can't use Bio1 EMW with Bio2 PLD, for example)
 
 ## Keyboard/Mouse (General)
@@ -54,12 +54,6 @@ Background and Mask images must be located in same directory as RDT
 | `RIGHT-MOUSE-BUTTON` | Orbit |
 | `MIDDLE-MOUSE-BUTTON` | Pan |
 | `RIGHT-MOUSE (Double-Click)` | Reset |
-
-## Controller
-- Support provided via XInput
-- Setup via main menu (View -> Controller Map)
-- Gameplay testing for Resident Evil and Resident Evil 2 (final retail and Nov '96 prototype) models
-- Character (PLD) and Weapon (PLW) both must be open
 
 ## Images
 ![3D Layout](/images/3d_layout.jpg?raw=true "3D Layout")
