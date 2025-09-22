@@ -36,7 +36,6 @@
     <ClCompile Include="..\..\bio-lib\Bio2\CPT\bio2_cpt.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio2\DIE\bio2_die.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio2\EDT\bio2_edt.cpp" />
-    <ClCompile Include="..\..\bio-lib\Bio2\ESP\bio2_esp.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio2\FLR\bio2_flr.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio2\LIT\bio2_lit.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio2\MD1\bio2_md1.cpp" />
@@ -56,11 +55,13 @@
     <ClCompile Include="..\..\bio-lib\Bio2_Nov96\CLUT\bio2_nov96_tex.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio3\bio3.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio3\MD2\bio3_md2.cpp" />
+    <ClCompile Include="..\..\bio-lib\Bio3\SCA\bio3_sca.cpp" />
     <ClCompile Include="..\..\bio-lib\Bio3\SLD\bio3_sld.cpp" />
     <ClCompile Include="..\..\bio-lib\CDX\bio_cdx.cpp" />
     <ClCompile Include="..\..\bio-lib\CDX\lzo.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_camera.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_common.cpp" />
+    <ClCompile Include="..\..\bio-lib\Common\bio_effect.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_geometry.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_animation.cpp" />
@@ -147,6 +148,7 @@
     <ClCompile Include="Source\app_controller.cpp" />
     <ClCompile Include="Source\app_draw.cpp" />
     <ClCompile Include="Source\app_edit_collision.cpp" />
+    <ClCompile Include="Source\app_edit_effect.cpp" />
     <ClCompile Include="Source\app_edit_model.cpp" />
     <ClCompile Include="Source\app_file.cpp" />
     <ClCompile Include="Source\app_imgui.cpp" />
@@ -158,6 +160,7 @@
     <ClInclude Include="..\..\bio-lib\Bio1\bio1.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\BLK\bio1_blk.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\CLUT\bio1_clut.h" />
+    <ClInclude Include="..\..\bio-lib\Bio1\ESP\bio1_esp.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\FLR\bio1_flr.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\LIT\bio1_lit.h" />
     <ClInclude Include="..\..\bio-lib\Bio1\PAK\bio1_pak.h" />
@@ -198,6 +201,7 @@
     <ClInclude Include="..\..\bio-lib\Bio3\bio3.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\MD2\bio3_md2.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\RDT\bio3_rdt.h" />
+    <ClInclude Include="..\..\bio-lib\Bio3\SCA\bio3_sca.h" />
     <ClInclude Include="..\..\bio-lib\Bio3\SLD\bio3_sld.h" />
     <ClInclude Include="..\..\bio-lib\CDX\bio_cdx.h" />
     <ClInclude Include="..\..\bio-lib\CDX\lzo.h" />
@@ -209,6 +213,7 @@
     <ClInclude Include="..\..\bio-lib\Common\animation\bio_state_machine.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_camera.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_common.h" />
+    <ClInclude Include="..\..\bio-lib\Common\bio_effect.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_geometry.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
@@ -251,6 +256,7 @@
     <ClInclude Include="..\..\sdk\imgui\imstb_textedit.h" />
     <ClInclude Include="..\..\sdk\imgui\imstb_truetype.h" />
     <ClInclude Include="..\..\sdk\imgui\misc\cpp\imgui_stdlib.h" />
+    <ClInclude Include="..\..\sdk\imgui_club\imgui_memory_editor\imgui_memory_editor.h" />
     <ClInclude Include="..\..\sdk\libpng\png.h" />
     <ClInclude Include="..\..\sdk\libpng\pngconf.h" />
     <ClInclude Include="..\..\sdk\libpng\pngdebug.h" />
@@ -438,7 +444,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;../../sdk/imgui_club/imgui_memory_editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -482,7 +488,7 @@ xcopy "..\..\mstd-lib\DX9\shader" "$(SolutionDir)Build\$(Configuration)\$(Platfo
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;../../sdk/imgui_club/imgui_memory_editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -518,7 +524,7 @@ xcopy "..\..\mstd-lib\DX9\shader" "$(SolutionDir)Build\$(Configuration)\$(Platfo
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio2/RDT;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;../../sdk/imgui_club/imgui_memory_editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -558,7 +564,7 @@ xcopy "..\..\mstd-lib\DX9\shader" "$(SolutionDir)Build\$(Configuration)\$(Platfo
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source;$(SolutionDir)Windows;../../mstd-lib;../../mstd-lib/Windows;../../mstd-lib/Geometry;../../mstd-lib/DX9;../../mstd-lib/XInput;../../sony-lib;../../sony-lib/GTE;../../bio-lib/Bio1;../../bio-lib/Bio2_Nov96;../../bio-lib/Bio2;../../bio-lib/Bio2/MD1;../../bio-lib/Bio3;../../bio-lib/Bio3/MD2;../../bio-lib/Common;../../bio-lib/Common/Model;../../bio-lib/Disc;../../bio-lib/CDX;../../sdk/zlib;../../sdk/libjpeg-turbo/src;../../sdk/libjpeg-turbo/build;../../sdk/libpng;../../sdk/imgui;../../sdk/imgui/backends;../../sdk/imgui/misc/cpp;../../sdk/imgui_club/imgui_memory_editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>

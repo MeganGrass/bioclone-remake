@@ -458,6 +458,8 @@ void Global_Application::SetCenterPanel(PanelType Type)
 	static constexpr std::uint32_t PANEL_TOP2D = std::to_underlying(PanelType::Top2D);
 	static constexpr std::uint32_t PANEL_CHARMODEL = std::to_underlying(PanelType::CharacterModel);
 	static constexpr std::uint32_t PANEL_ROOMMODEL = std::to_underlying(PanelType::RoomModel);
+	static constexpr std::uint32_t PANEL_EFFECT = std::to_underlying(PanelType::Effect);
+	static constexpr std::uint32_t PANEL_SCRIPT = std::to_underlying(PanelType::Script);
 
 	m_PanelType = Type;
 
@@ -522,6 +524,22 @@ void Global_Application::SetCenterPanel(PanelType Type)
 			Player->b_EditorMode = false;
 
 			Room->SetEditor(Room_Editor_Type::MODEL);
+
+			Camera->SetEditor(Camera->m_EditorFOV, Camera->m_EditorEye, Camera->m_EditorAt);
+		}
+	}
+
+	if (std::to_underlying(Type) & PANEL_EFFECT)
+	{
+		if (!Room->b_EditEffect)
+		{
+			Camera->b_ViewTopDown = false;
+			Camera->b_ViewEditor = true;
+
+			Player->b_Active.store(false);
+			Player->b_EditorMode = false;
+
+			Room->SetEditor(Room_Editor_Type::ESP);
 
 			Camera->SetEditor(Camera->m_EditorFOV, Camera->m_EditorEye, Camera->m_EditorAt);
 		}
@@ -629,6 +647,13 @@ void Global_Application::CenterPanel(ImVec2 Position, ImVec2 Size)
 			ImGui::EndTabItem();
 		}
 
+		if (ImGui::BeginTabItem("Effect##CenterPanel"))
+		{
+			SetCenterPanel(PanelType::Effect);
+			RenderWindow();
+			ImGui::EndTabItem();
+		}
+
 		ImGui::EndTabBar();
 	}
 
@@ -656,6 +681,13 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 		return;
 	}
 
+	if (IsPanelType(PanelType::Effect))
+	{
+		EffectEditor();
+		ImGui::End();
+		return;
+	}
+
 	if (ImGui::CollapsingHeader("Type##RightPanel", ImGuiTreeNodeFlags_None))
 	{
 		bool b_Bio1Aug95 = Room->GameType() & (AUG95);
@@ -669,10 +701,10 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 		{
 			TooltipOnHover("Room Game Type on Open/Save");
 			ImGui::TableNextColumn();
-			if (ImGui::Checkbox(" Bio1 Aug '95 Alpha##RoomType", &b_Bio1Aug95)) { Room->SetGame(Video_Game::Resident_Evil_Aug_4_1995); }
-			TooltipOnHover("Resident Evil (Aug 1995) Prototype");
-			if (ImGui::Checkbox(" Bio1 Oct '95 Alpha##RoomType", &b_Bio1Oct95)) { Room->SetGame(Video_Game::Resident_Evil_Oct_4_1995); }
-			TooltipOnHover("Resident Evil (Oct 1995) Prototype");
+			if (ImGui::Checkbox(" Bio1 Aug '95##RoomType", &b_Bio1Aug95)) { Room->SetGame(Video_Game::Resident_Evil_Aug_4_1995); }
+			TooltipOnHover("Resident Evil (Aug 1995) Alpha");
+			if (ImGui::Checkbox(" Bio1 Oct '95##RoomType", &b_Bio1Oct95)) { Room->SetGame(Video_Game::Resident_Evil_Oct_4_1995); }
+			TooltipOnHover("Resident Evil (Oct 1995) Alpha");
 			if (ImGui::Checkbox(" Bio1##RoomType", &b_Bio1)) { Room->SetGame(Video_Game::Resident_Evil); }
 			TooltipOnHover("Resident Evil");
 			if (ImGui::Checkbox(" Bio2 Nov '96##RoomType", &b_Bio2Nov96)) { Room->SetGame(Video_Game::Resident_Evil_2_Nov_6_1996); }
@@ -857,7 +889,7 @@ void Global_Application::MouseCamera(VECTOR2& Eye, VECTOR2& At, bool b_Editor)
 	bool m_MouseMiddle = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
 	bool m_KeyShift = ImGui::GetIO().KeyShift;
 
-	if (!Model)
+	if ((IsPanelType(PanelType::CharacterModel) || IsPanelType(PanelType::RoomModel)) && !Model)
 	{
 		b_MouseCamera = false;
 		return;

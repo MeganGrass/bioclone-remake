@@ -237,6 +237,134 @@ void Global_Application::DrawFloor(void)
 	}
 }
 
+void Global_Application::DrawEffect(std::size_t iElement, VECTOR2 Position, const float Scale)
+{
+	if (b_FileOp.load()) { return; }
+
+	if (iElement >= Room->Esp->Data().size() || Room->Esp->Get(iElement).Id == 0xFF) { return; }
+
+#ifdef MSTD_DX9
+	const float TexelOffset = 0.5f;
+
+	//Render->AlphaBlending(TRUE, D3DBLEND_SRCALPHA, D3DBLEND_INVSRCALPHA);
+	//Render->AlphaTesting(TRUE, 0xFF, D3DCMP_GREATEREQUAL);
+
+	Render->ResetWorld();
+#else
+	const float TexelOffset = 0.0f;
+#endif
+
+	vec3 World = vec3(GTE->ToFloat(Position.x), GTE->ToFloat(Position.y), GTE->ToFloat(Position.z));
+
+	vec3 Side{};
+
+	vec3 Billboard{};
+
+	Camera->GetBillboard(World, Side, Billboard);
+
+	Side.Scale(-1.0f);
+
+	const auto& Effect = Room->Esp->Get(iElement);
+
+	const auto& SSeq = Effect.SSequence[Room->Esp->iSSeq];
+
+	for (std::size_t i = 0; i < SSeq.nSpr; i++)
+	{
+		if (!SSeq.Time || SSeq.Time == 0xFF) { continue; }
+
+		const auto& Group = Effect.SpriteGp[SSeq.pGp + i];
+
+		const float Width = static_cast<float>(SSeq.Width);
+		const float Height = static_cast<float>(SSeq.Height);
+
+		const float U0 = (static_cast<float>(Group.U) + TexelOffset) / Effect.TextureWidth;
+		const float V0 = (static_cast<float>(Group.V) + TexelOffset) / Effect.TextureHeight;
+		const float U1 = (static_cast<float>(Group.U) + Width - TexelOffset) / Effect.TextureWidth;
+		const float V1 = (static_cast<float>(Group.V) + Height - TexelOffset) / Effect.TextureHeight;
+
+		float Left = 0;
+		float Top = 0;
+		if (Room->Esp->GameType() & (AUG95 | OCT95 | BIO1))
+		{
+			Left = static_cast<float>(-Group.OfsX / 8) * Scale;
+			Top = static_cast<float>(-Group.OfsY / 8) * Scale;
+		}
+		else
+		{
+			Left = static_cast<float>(-SSeq.Hotx + Group.OfsX) * Scale;
+			Top = static_cast<float>(-SSeq.Hoty + Group.OfsY) * Scale;
+		}
+		const float Right = (Left + Width * Scale);
+		const float Bottom = (Top + Height * Scale);
+
+		std::vector<vec3t> Vector = {
+			{ { World + Side * Left + Billboard * Bottom }, { U0, V1 } },
+			{ { World + Side * Left + Billboard * Top }, { U0, V0 } },
+			{ { World + Side * Right + Billboard * Bottom }, { U1, V1 } },
+			{ { World + Side * Right + Billboard * Top }, { U1, V0 } },
+		};
+
+#ifdef MSTD_DX9
+		std::unique_ptr<IDirect3DVertexBuffer9, IDirect3DDelete9<IDirect3DVertexBuffer9>> Vertices;
+
+		Vertices.reset(Render->CreateVec3t(Vector));
+
+		Render->DrawVec3t(Vertices.get(), nullptr, Effect.Texture[Room->iEffectClutID].get(), Render->PS1DitherPixelShader.get(), Effect.TextureWidth, Effect.TextureHeight);
+#endif
+	}
+
+	{
+#ifdef MSTD_DX9
+		//Render->AlphaBlending(FALSE, D3DBLEND_ZERO, D3DBLEND_ZERO);
+		//Render->AlphaTesting(FALSE, 0x00, D3DCMP_NEVER);
+#endif
+	}
+
+	if (!Room->Esp->b_Play.load()) { return; }
+
+	if (Room->Esp->m_FrameCounter % 2 == 0)
+	{
+		Room->Esp->iTime.fetch_add(1);
+		if (Room->Esp->iTime.load() >= SSeq.Time || SSeq.Time == 0xFF)
+		{
+			Room->Esp->iTime.store(0);
+			Room->Esp->iSSeq.fetch_add(1);
+			Room->Esp->m_FrameCounter = 0;
+		}
+	}
+
+	Room->Esp->m_FrameCounter++;
+
+	const size_t m_FrameCount = Effect.SSequence.empty() ? 0 : Effect.SSequence.size() - 1;
+
+	const bool b_FirstFrame = (Room->Esp->iSSeq.load() == 0);
+	const bool b_LastFrame = (Room->Esp->iSSeq.load() >= m_FrameCount);
+
+	if (Room->Esp->b_Loop.load())
+	{
+		if (!Room->Esp->b_PlayInReverse.load())
+		{
+			if (b_LastFrame)
+			{
+				Room->Esp->iTime.store(0);
+				Room->Esp->iSSeq.store(0);
+				Room->Esp->m_FrameCounter = 0;
+			}
+		}
+		else
+		{
+			if (b_FirstFrame)
+			{
+				Room->Esp->iTime.store(0);
+				Room->Esp->iSSeq.store(m_FrameCount);
+				Room->Esp->m_FrameCounter = 0;
+			}
+		}
+	}
+
+	else if (b_LastFrame) { Room->Esp->iSSeq.store(m_FrameCount); Room->Esp->m_FrameCounter = 0; }
+}
+
 void Global_Application::ResetLighting(void) const
 {
 	Render->SetPSXLightMag(0);

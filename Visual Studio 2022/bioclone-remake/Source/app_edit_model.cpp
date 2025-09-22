@@ -39,6 +39,7 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				}
 
 				ImGui::TableNextColumn();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
 				if (ImGui::SliderScalar("##ItemModelIndex", ImGuiDataType_U64, &iItem, &iItemMin, &iItemMax))
 				{
 					if (b_Item) { Model = Room->Item[iItem]; } else { Model.reset(); }
@@ -57,6 +58,7 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				}
 
 				ImGui::TableNextColumn();
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
 				if (ImGui::SliderScalar("##ObjectModelIndex", ImGuiDataType_U64, &iObject, &iObjectMin, &iObjectMax))
 				{
 					if (b_Object) { Model = Room->Object[iObject]; } else { Model.reset(); }
@@ -194,15 +196,23 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 			if (ImGui::MenuItem(" Room##ModelAnimationIndexTable", NULL, &b_Room)) { Model->ResetClip(); Model->SetAnimIndex(AnimationIndex::Room); }
 			TooltipOnHover("Room Animation\r\nRDT");
 
+			Model->iRoomMax = static_cast<std::size_t>(Room->Rbj->Data.empty() ? 0 : Room->Rbj->Data.size() - 1);
+
 			ImGui::TableNextColumn();
-			ImGui::BeginDisabled(!IsRoomOpen() || Room->Rbj->Data.empty());
+			ImGui::BeginDisabled(Room->Rbj->Data.empty());
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
 			if (ImGui::SliderScalar("##ModelAnimationIndex", ImGuiDataType_U64, &Model->iRoom, &Model->iRoomMin, &Model->iRoomMax))
 			{
-				Model->iRoom = std::clamp(Model->iRoom, (size_t)0, Model->iRoomMax);
+				Model->ResetClip();
+				Model->iRoom = std::clamp(Model->iRoom, static_cast<std::size_t>(0), Model->iRoomMax);
 				Model->Animation(AnimationIndex::Room) = Room->Rbj->Data[Model->iRoom];
 			}
-			ScrollOnHover(&Model->iRoom, ImGuiDataType_U64, 1, Model->iRoomMin, Model->iRoomMax);
+			ScrollOnHover(&Model->iRoom, ImGuiDataType_U64, 1, Model->iRoomMin, Model->iRoomMax, [&]()
+				{
+					Model->ResetClip();
+					Model->iRoom = std::clamp(Model->iRoom, static_cast<std::size_t>(0), Model->iRoomMax);
+					Model->Animation(AnimationIndex::Room) = Room->Rbj->Data[Model->iRoom];
+				});
 			ImGui::EndDisabled();
 			TooltipOnHover("Room Animation Container ID");
 
@@ -258,8 +268,11 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 		}
 		TooltipOnHover("Polygons will be drawn as textured");
 
-		ImGui::MenuItem(" Skeleton##ModelRender", NULL, &Model->b_DrawSkeleton);
-		TooltipOnHover("Skeleton will be drawn");
+		if (!b_RoomModel)
+		{
+			ImGui::MenuItem(" Skeleton##ModelRender", NULL, &Model->b_DrawSkeleton);
+			TooltipOnHover("Skeleton will be drawn");
+		}
 
 		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
@@ -558,7 +571,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorPosition().x = std::clamp(Model->EditorPosition().x, -32767, 32767);
 				}
-				ScrollOnHover(&Model->EditorPosition().x, ImGuiDataType_S32, 32, -32767, 32767);
+				ScrollOnHover(&Model->EditorPosition().x, ImGuiDataType_S32, 32, -32767, 32767, []()
+					{
+						Model->EditorPosition().x = std::clamp(Model->EditorPosition().x, -32767, 32767);
+					});
 				TooltipOnHover("Position X");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -566,7 +582,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorPosition().y = std::clamp(Model->EditorPosition().y, -32767, 32767);
 				}
-				ScrollOnHover(&Model->EditorPosition().y, ImGuiDataType_S32, 32, -32767, 32767);
+				ScrollOnHover(&Model->EditorPosition().y, ImGuiDataType_S32, 32, -32767, 32767, []()
+					{
+						Model->EditorPosition().y = std::clamp(Model->EditorPosition().y, -32767, 32767);
+					});
 				TooltipOnHover("Position Y");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -574,7 +593,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorPosition().z = std::clamp(Model->EditorPosition().z, -32767, 32767);
 				}
-				ScrollOnHover(&Model->EditorPosition().z, ImGuiDataType_S32, 32, -32767, 32767);
+				ScrollOnHover(&Model->EditorPosition().z, ImGuiDataType_S32, 32, -32767, 32767, []()
+					{
+						Model->EditorPosition().z = std::clamp(Model->EditorPosition().z, -32767, 32767);
+					});
 				TooltipOnHover("Position Z");
 			}
 
@@ -586,7 +608,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorRotation().x = std::clamp(Model->EditorRotation().x, -4096, 4096);
 				}
-				ScrollOnHover(&Model->EditorRotation().x, ImGuiDataType_S32, 32, -4096, 4096);
+				ScrollOnHover(&Model->EditorRotation().x, ImGuiDataType_S32, 32, -4096, 4096, []()
+					{
+						Model->EditorRotation().x = std::clamp(Model->EditorRotation().x, -4096, 4096);
+					});
 				TooltipOnHover("Rotation X");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -594,7 +619,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorRotation().y = std::clamp(Model->EditorRotation().y, -4096, 4096);
 				}
-				ScrollOnHover(&Model->EditorRotation().y, ImGuiDataType_S32, 32, -4096, 4096);
+				ScrollOnHover(&Model->EditorRotation().y, ImGuiDataType_S32, 32, -4096, 4096, []()
+					{
+						Model->EditorRotation().y = std::clamp(Model->EditorRotation().y, -4096, 4096);
+					});
 				TooltipOnHover("Rotation Y");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -602,7 +630,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorRotation().z = std::clamp(Model->EditorRotation().z, -4096, 4096);
 				}
-				ScrollOnHover(&Model->EditorRotation().z, ImGuiDataType_S32, 32, -4096, 4096);
+				ScrollOnHover(&Model->EditorRotation().z, ImGuiDataType_S32, 32, -4096, 4096, []()
+					{
+						Model->EditorRotation().z = std::clamp(Model->EditorRotation().z, -4096, 4096);
+					});
 				TooltipOnHover("Rotation Z");
 			}
 
@@ -614,7 +645,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorScale().x = std::clamp(Model->EditorScale().x, 0, 32768);
 				}
-				ScrollOnHover(&Model->EditorScale().x, ImGuiDataType_S32, 512, 0, 32768);
+				ScrollOnHover(&Model->EditorScale().x, ImGuiDataType_S32, 512, 0, 32768, []()
+					{
+						Model->EditorScale().x = std::clamp(Model->EditorScale().x, 0, 32768);
+					});
 				TooltipOnHover("Scale X");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -622,7 +656,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorScale().y = std::clamp(Model->EditorScale().y, 0, 32768);
 				}
-				ScrollOnHover(&Model->EditorScale().y, ImGuiDataType_S32, 512, 0, 32768);
+				ScrollOnHover(&Model->EditorScale().y, ImGuiDataType_S32, 512, 0, 32768, []()
+					{
+						Model->EditorScale().y = std::clamp(Model->EditorScale().y, 0, 32768);
+					});
 				TooltipOnHover("Scale Y");
 
 				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
@@ -630,7 +667,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 				{
 					Model->EditorScale().z = std::clamp(Model->EditorScale().z, 0, 32768);
 				}
-				ScrollOnHover(&Model->EditorScale().z, ImGuiDataType_S32, 512, 0, 32768);
+				ScrollOnHover(&Model->EditorScale().z, ImGuiDataType_S32, 512, 0, 32768, []()
+					{
+						Model->EditorScale().z = std::clamp(Model->EditorScale().z, 0, 32768);
+					});
 				TooltipOnHover("Scale Z");
 			}
 
@@ -694,14 +734,20 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 		{
 			ImGui::TableNextColumn(); ImGui::Text(" Clip");
 
-			size_t ClipCount = Model->Animation(Model->AnimIndex())->GetClipCount();
-			size_t iClipMin = 0;
-			size_t iClipMax = ClipCount ? ClipCount - 1 : 0;
+			const size_t m_ClipCount = Model->Animation(Model->AnimIndex())->GetClipCount();
+			const size_t iClipMin = 0;
+			const size_t iClipMax = m_ClipCount ? m_ClipCount - 1 : 0;
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
-			ImGui::SliderScalar("##ModelPlaybackClip", ImGuiDataType_U64, &Model->iClip, &iClipMin, &iClipMax);
-			ScrollOnHover(&Model->iClip, ImGuiDataType_U64, 1, iClipMin, iClipMax);
+			if (ImGui::SliderScalar("##ModelPlaybackClip", ImGuiDataType_U64, &Model->iClip, &iClipMin, &iClipMax))
+			{
+				Model->iFrame.store(0);
+			}
+			if (ScrollOnHover(&Model->iClip, ImGuiDataType_U64, 1, iClipMin, iClipMax))
+			{
+				Model->iFrame.store(0);
+			}
 
 			ImGui::EndTable();
 		}
@@ -711,9 +757,10 @@ void Global_Application::ModelEditor(const bool b_RoomModel)
 		{
 			ImGui::TableNextColumn(); ImGui::Text(" Keyframe");
 
-			size_t FrameCount = Model->Animation(Model->AnimIndex())->GetFrameCount(Model->iClip);
-			size_t iFrameMin = 0;
-			size_t iFrameMax = FrameCount ? FrameCount - 1 : 0;
+			const size_t m_FrameCount = Model->Animation(Model->AnimIndex())->GetFrameCount(Model->iClip);
+			const size_t iFrameMin = 0;
+			const size_t iFrameMax = m_FrameCount ? m_FrameCount - 1 : 0;
+
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
 			ImGui::SliderScalar("##ModelPlaybackKeyframe", ImGuiDataType_U64, &Model->iFrame, &iFrameMin, &iFrameMax);

@@ -194,6 +194,18 @@
     <Filter Include="BioHazard\Bio1.5\RDT">
       <UniqueIdentifier>{5ef6777d-3a90-4bf5-9d32-1c7ddcce5726}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SDK\imgui_club">
+      <UniqueIdentifier>{173975ee-b77d-49ff-ab41-864b7a674d88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SDK\imgui_club\imgui_memory_editor">
+      <UniqueIdentifier>{26776bc6-906d-4fc3-b400-1fe3b9258810}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio3\SCA">
+      <UniqueIdentifier>{7e082368-f223-4709-a7fd-344c3953a920}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BioHazard\Bio1\ESP">
+      <UniqueIdentifier>{bb198c34-c548-4625-9eae-274bc1b85d6e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\mstd-lib\std_basic_fstream.cpp">
@@ -436,9 +448,6 @@
     <ClCompile Include="..\..\bio-lib\Bio2\FLR\bio2_flr.cpp">
       <Filter>BioHazard\Bio2\FLR</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\bio-lib\Bio2\ESP\bio2_esp.cpp">
-      <Filter>BioHazard\Bio2\ESP</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\bio-lib\Bio2\EDT\bio2_edt.cpp">
       <Filter>BioHazard\Bio2\EDT</Filter>
     </ClCompile>
@@ -572,6 +581,15 @@
       <Filter>BioHazard\Common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp">
+      <Filter>BioHazard\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Bio3\SCA\bio3_sca.cpp">
+      <Filter>BioHazard\Bio3\SCA</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_edit_effect.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Common\bio_effect.cpp">
       <Filter>BioHazard\Common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -971,6 +989,18 @@
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Common\animation\bio_state_machine.h">
       <Filter>BioHazard\Common\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\imgui_club\imgui_memory_editor\imgui_memory_editor.h">
+      <Filter>SDK\imgui_club\imgui_memory_editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio3\SCA\bio3_sca.h">
+      <Filter>BioHazard\Bio3\SCA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_effect.h">
+      <Filter>BioHazard\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Bio1\ESP\bio1_esp.h">
+      <Filter>BioHazard\Bio1\ESP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

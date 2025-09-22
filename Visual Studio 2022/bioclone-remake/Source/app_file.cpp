@@ -27,8 +27,6 @@ void Global_Application::CloseRDT(const bool b_AskSave)
 
 	Room->Close();
 
-	Geometry->iObjectMax = 0;
-
 	Player->CloseRoom();
 
 	ResetLighting();
@@ -53,7 +51,14 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 				Camera->Set(Room->Rid->Get(iCut)->ViewR >> 7, Room->Rid->Get(iCut)->View_p, Room->Rid->Get(iCut)->View_r);
 			}
 
-			Geometry->iObjectMax = Room->Sca->Count() ? Room->Sca->Count() - 1 : 0;
+			if (Player->b_ControllerMode)
+			{
+				m_PlayerState->Set(Idle);
+			}
+			else
+			{
+				Player->ResetClip();
+			}
 
 			Player->SetRoomAnimations(Room->Rbj);
 

@@ -21,6 +21,7 @@
 #include <imgui_impl_dx9.h>
 #include <imgui_impl_win32.h>
 #include <imgui_stdlib.h>
+#include <imgui_memory_editor.h>
 
 typedef class Global_Application Global;
 
@@ -32,6 +33,8 @@ enum class PanelType : std::int32_t
 	Top2D = (1 << 1),
 	CharacterModel = (1 << 2),
 	RoomModel = (1 << 3),
+	Effect = (1 << 4),
+	Script = (1 << 5),
 };
 
 class Global_Application final :
@@ -134,13 +137,11 @@ private:
 
 	void CollisionEditor(void);
 	void ModelEditor(const bool b_RoomModel);
+	void EffectEditor(void);
 
-	void InitCommonStateBio1(std::uintmax_t iWeapon);
-	void InitWeaponStateBio1(std::uintmax_t iWeapon);
-	void InitCommonStateBio2Nov96(std::uintmax_t iWeapon);
-	void InitWeaponStateBio2Nov96(std::uintmax_t iWeapon);
-	void InitCommonStateBio2(std::uintmax_t iWeapon);
-	void InitWeaponStateBio2(std::uintmax_t iWeapon);
+	void InitPlayerStateBio1(std::uintmax_t iWeapon);
+	void InitPlayerStateBio2Nov96(std::uintmax_t iWeapon);
+	void InitPlayerStateBio2(std::uintmax_t iWeapon);
 
 	void InitPlayerState(std::shared_ptr<Resident_Evil_Model> Model, std::unique_ptr<StateMachineType>& State);
 	void ControllerInput(std::unique_ptr<StateMachineType>& State);
@@ -152,6 +153,7 @@ private:
 	void DrawCollision(void);
 	void DrawBlock(void);
 	void DrawFloor(void);
+	void DrawEffect(std::size_t iElement, VECTOR2 Position, const float Scale = 1.0f / (ONE / 32));
 	void ResetLighting(void) const;
 	void SetLighting(void);
 	void Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox);

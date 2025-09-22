@@ -27,11 +27,13 @@ void Global_Application::CollisionEditor(void)
 		ImGui::MenuItem(" Highlight##CollisionEditor", NULL, &Geometry->b_HighlightCollision);
 		TooltipOnHover("Highlight selected in red\r\n");
 
+		Geometry->iObjectMax = Room->Sca->Count() ? Room->Sca->Count() - 1 : 0;
+
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
 		if (ImGui::SliderScalar("##CollisionEditorID", ImGuiDataType_U64, &Geometry->iObject, &Geometry->iObjectMin, &Geometry->iObjectMax))
 		{
-			Geometry->iObject = std::clamp(Geometry->iObject, (size_t)0, Geometry->iObjectMax);
+			Geometry->iObject = std::clamp(Geometry->iObject, static_cast<std::size_t>(0), Geometry->iObjectMax);
 		}
 		TooltipOnHover("Selected ID\r\n");
 		ScrollOnHover(&Geometry->iObject, ImGuiDataType_U64, 1, Geometry->iObjectMin, Geometry->iObjectMax);

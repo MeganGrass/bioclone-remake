@@ -111,8 +111,11 @@ void Global_Application::RenderScene(void)
 			Render->SetPSXLightToggle(b_PerPixelLighting, !b_PerPixelLighting && !b_PerVertexLighting ? true : false);
 
 			Model->Draw();
+		}
 
-			Render->SetPSXLightToggle(true, false);
+		if (IsPanelType(PanelType::Effect) && !Room->Esp->Data().empty())
+		{
+			DrawEffect(Room->iEffect, Room->Esp->Data()[Room->iEffect].Position);
 		}
 	}
 
@@ -144,11 +147,10 @@ void Global_Application::Draw(void)
 	{
 		b_RequestFontChange = false;
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->Clear();
-		io.Fonts->AddFontFromFileTTF(Window->FontList()[Window->FontIndex()].string().c_str(), Window->FontSize());
-		io.FontDefault = io.Fonts->Fonts.back();
-		io.Fonts->Build();
+		ImGui::GetIO().Fonts->Clear();
+		ImGui::GetIO().Fonts->AddFontFromFileTTF(Window->FontList()[Window->FontIndex()].string().c_str(), Window->FontSize());
+		ImGui::GetIO().FontDefault = ImGui::GetIO().Fonts->Fonts.back();
+		ImGui::GetIO().Fonts->Build();
 
 		ImGui_ImplDX9_InvalidateDeviceObjects();
 		ImGui_ImplDX9_CreateDeviceObjects();
@@ -161,6 +163,8 @@ void Global_Application::Draw(void)
 	{
 		//bool show_demo_window = true;
 		//ImGui::ShowDemoWindow(&show_demo_window);
+
+		ImGui::PushFont(NULL, Window->FontSize());
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 7.4f);
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 7.4f);
@@ -199,6 +203,8 @@ void Global_Application::Draw(void)
 		ImGui::PopStyleColor();
 
 		ImGui::PopStyleVar(7);
+
+		ImGui::PopFont();
 	}
 	ImGui::EndFrame();
 
