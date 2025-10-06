@@ -67,6 +67,7 @@
     <ClCompile Include="..\..\bio-lib\Common\bio_animation.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_model.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp" />
+    <ClCompile Include="..\..\bio-lib\Common\bio_script.cpp" />
     <ClCompile Include="..\..\bio-lib\Disc\bio_disk.cpp" />
     <ClCompile Include="..\..\mstd-lib\DX9\std_dx9.cpp" />
     <ClCompile Include="..\..\mstd-lib\Geometry\std_matrix.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="Source\app_file.cpp" />
     <ClCompile Include="Source\app_imgui.cpp" />
     <ClCompile Include="Source\app_roomcut.cpp" />
+    <ClCompile Include="Source\app_script.cpp" />
     <ClCompile Include="Source\app_settings.cpp" />
     <ClCompile Include="Source\main.cpp" />
   </ItemGroup>
@@ -190,7 +192,6 @@
     <ClInclude Include="..\..\bio-lib\Bio2\RVD\bio2_rvd.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\SCA\bio2_sca.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\SCD\bio2_bytecode.h" />
-    <ClInclude Include="..\..\bio-lib\Bio2\SCD\bio2_bytecode_map.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\SCD\bio2_defines.h" />
     <ClInclude Include="..\..\bio-lib\Bio2\SLD\bio2_sld.h" />
     <ClInclude Include="..\..\bio-lib\Bio2_Nov96\bio2_nov96.h" />
@@ -219,6 +220,7 @@
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_model.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_room.h" />
+    <ClInclude Include="..\..\bio-lib\Common\bio_script.h" />
     <ClInclude Include="..\..\bio-lib\Disc\bio_disk.h" />
     <ClInclude Include="..\..\mstd-lib\DX9\std_dx9.h" />
     <ClInclude Include="..\..\mstd-lib\Geometry\std_matrix.h" />
@@ -348,6 +350,56 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_auto_hdr.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_daguerreotype.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_grayscale.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_posterization.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_sepia.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="..\..\mstd-lib\DX9\shader\vertex.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">3.0</ShaderModel>

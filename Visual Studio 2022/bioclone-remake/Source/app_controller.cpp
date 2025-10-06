@@ -1472,6 +1472,7 @@ void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& Stat
 	bool b_Right = Gamepad->IsPressed(Gamepad->Map().Right);
 	bool b_Down = Gamepad->IsPressed(Gamepad->Map().Down);
 	bool b_Left = Gamepad->IsPressed(Gamepad->Map().Left);
+	bool b_Circle = Gamepad->IsPressed(Gamepad->Map().Circle);
 	bool b_Cross = Gamepad->IsPressed(Gamepad->Map().Cross);
 	bool b_Square = Gamepad->IsPressed(Gamepad->Map().Square);
 	bool b_R1 = Aim_Begin.GetClip() == std::to_underlying(AnimStateCustom::Dummy) ? false : Gamepad->IsPressed(Gamepad->Map().R1);
@@ -1566,6 +1567,24 @@ void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& Stat
 		{
 			m_KeyState |= RUN;
 		}
+	}
+	
+	if (!b_R1 && b_Cross && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
+	{
+		m_KeyState |= (INSPECT | CONFIRM);
+	}
+	else if (!b_R1 && b_Circle && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
+	{
+		m_KeyState |= CANCEL;
+	}
+
+	if (!b_R1 && b_Right && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
+	{
+		m_KeyState |= NEXT;
+	}
+	else if (!b_R1 && b_Left && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
+	{
+		m_KeyState |= PREV;
 	}
 
 	State->Update(m_KeyState);

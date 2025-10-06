@@ -318,6 +318,21 @@ void Global_Application::OpenConfig(void)
 				m_BootWeaponFilename = Args[1];
 			}
 
+			if (Standard_String().ToUpper(Args[0]) == L"M_PLAYERPATH")
+			{
+				m_PlayerPath = Args[1];
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"M_ENEMYPATH")
+			{
+				m_EnemyPath = Args[1];
+			}
+
+			if (Standard_String().ToUpper(Args[0]) == L"M_DOORPATH")
+			{
+				m_DoorPath = Args[1];
+			}
+
 			if (Standard_String().ToUpper(Args[0]) == L"M_AIM")
 			{
 				std::int32_t Value = std::stoi(Args[1]);
@@ -504,6 +519,10 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"m_ModelLerpValue\t%f\r", Player->m_LerpValue);
 	Text->AddLine(L"m_ModelFilename\t\"%ws\"\r", Player->Filename().wstring().c_str());
 	Text->AddLine(L"m_ModelWeaponFilename\t\"%ws\"\r", Player->WeaponFilename().wstring().c_str());
+
+	Text->AddLine(L"m_PlayerPath\t\"%ws\"\r", m_PlayerPath.wstring().c_str());
+	Text->AddLine(L"m_EnemyPath\t\"%ws\"\r", m_EnemyPath.wstring().c_str());
+	Text->AddLine(L"m_DoorPath\t\"%ws\"\r", m_DoorPath.wstring().c_str());
 
 	Text->AddLine(L"m_RoomGameType\t0x%x\r", Room->GameType());
 

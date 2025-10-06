@@ -16,12 +16,13 @@ const bool Global_Application::IsRoomOpen(void)
 
 void Global_Application::CloseRDT(const bool b_AskSave)
 {
-	if (!IsRoomOpen()) { return; }
+	if (!Room->IsOpen()) { return; }
 
-	if (b_AskSave && Room->IsOpen() && Window->Question(L"Do you want to save the current RDT file?"))
-	{
-		SaveRDT();
-	}
+	// TODO: re-enable during modification phase of development cycle
+	//if (b_AskSave && Room->IsOpen() && Window->Question(L"Do you want to save the current RDT file?"))
+	//{
+	//	SaveRDT();
+	//}
 
 	Camera->Reset();
 
@@ -36,20 +37,25 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 {
 	b_FileOp.store(true);
 
-	auto InitializeRoom = [&](const bool b_AskSave)
+	auto InitializeRoom = [&](const std::filesystem::path _Filename, const bool b_AskSave)
 		{
 			CloseRDT(b_AskSave);
+
+			Room->Open(_Filename);
 
 			Camera->m_Cx = GTE->ToFloat(Room->Sca->GetHeader()->Cx);
 			Camera->m_Cz = GTE->ToFloat(Room->Sca->GetHeader()->Cz);
 
 			Camera->SetMeta(Room->m_Path, Room->m_Stage, Room->m_Room, Room->GetCameraCount(), Room->m_Game);
+
 			Camera->SetImage(iCut);
 
 			if (!Camera->b_ViewTopDown && !Camera->b_ViewEditor)
 			{
 				Camera->Set(Room->Rid->Get(iCut)->ViewR >> 7, Room->Rid->Get(iCut)->View_p, Room->Rid->Get(iCut)->View_r);
 			}
+
+			Room->Rvd->GetFrustum(iCut, Camera->m_Frustum);
 
 			if (Player->b_ControllerMode)
 			{
@@ -63,11 +69,14 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 			Player->SetRoomAnimations(Room->Rbj);
 
 			SetLighting();
+
+			Room->Script->Initialize();
+			Room->Script->Initialize = []() -> void {};
 		};
 
-	if (!Filename.empty() && Standard_FileSystem().Exists(Filename) && Room->Open(Filename))
+	if (!Filename.empty() && Standard_FileSystem().Exists(Filename))
 	{
-		InitializeRoom(false);
+		InitializeRoom(Filename, false);
 		b_FileOp.store(false);
 		return;
 	}
@@ -76,11 +85,8 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 
 	if (auto Filename = Window->GetOpenFilename({ Room->GameStrW().c_str() }, { L"*.rdt" }); Filename.has_value())
 	{
-		if (Room->Open(Filename.value()))
-		{
-			iCut = 0;
-			InitializeRoom(true);
-		}
+		iCut = 0;
+		InitializeRoom(Filename.value(), true);
 	}
 
 	CoUninitialize();

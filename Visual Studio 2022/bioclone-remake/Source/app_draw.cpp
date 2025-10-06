@@ -237,6 +237,78 @@ void Global_Application::DrawFloor(void)
 	}
 }
 
+void Global_Application::DrawScenario(void)
+{
+	if (!IsRoomOpen() || !b_ScriptOp.load() || Camera->b_ViewEditor) { return; }
+
+	ScriptOp.Enqueue([this]()
+		{
+			Room->Script->Routine();
+
+			Sce->ProcessAOT();
+		});
+
+	{
+		Render->SetPSXLightToggle(false, true);
+
+		if (b_DrawAot.load())
+		{
+			for (size_t i = 0; i < Sce->Sce_aot.size(); i++)
+			{
+				auto& Aot = Sce->Sce_aot[i];
+
+				if (Aot.Id == SCE_NOTHING) { continue; }
+
+				int32_t Y = Aot.nFloor * -1800;
+				int32_t H = Y + -1800;
+
+				if (Aot.Is4P)
+				{
+					G->Geometry->Draw4p(Aot.Xz, Y, 0x002020E0, true);
+				}
+				else
+				{
+					G->Geometry->DrawBox({ Aot.X, Y, Aot.Z, Aot.W, H, Aot.D }, { }, 0x002020E0, true);
+				}
+			}
+		}
+	}
+
+	{
+		Render->AlphaTesting(TRUE, 0xFF, D3DCMP_GREATEREQUAL);
+
+		Render->SetPSXLightToggle(b_PerPixelLighting, !b_PerPixelLighting && !b_PerVertexLighting ? true : false);
+
+		for (size_t i = 0; i < Room->Object.size(); i++)
+		{
+			auto& Object = Room->Object[i];
+
+			if (Object && Object->ModelDX9())
+			{
+				if (Geometry->Collision4P(Object->Position(), Camera->m_Frustum))
+				{
+					Object->DrawObject(0, true, false);
+				}
+
+				// Geometry->CollisionHitbox(Player->Position(), Player->Hitbox(), Object->Position(), Object->Hitbox());
+			}
+		}
+
+		for (size_t i = 0; i < Enemy.size(); i++)
+		{
+			if (Enemy[i] && Enemy[i]->ModelDX9() && Enemy[i]->b_Active)
+			{
+				if (Geometry->Collision4P(Enemy[i]->Position(), Camera->m_Frustum))
+				{
+					Enemy[i]->Draw();
+				}
+			}
+		}
+
+		Render->SetPSXLightToggle(true, false);
+	}
+}
+
 void Global_Application::DrawEffect(std::size_t iElement, VECTOR2 Position, const float Scale)
 {
 	if (b_FileOp.load()) { return; }
@@ -460,12 +532,18 @@ void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 
 		if (Data[i].Fcut == Camera->m_Cut)
 		{
-			if (Geometry->CameraSwitch(Position, Data[i].Xz))
+			if (Geometry->Collision4P(Position, Data[i].Xz))
 			{
 				uint8_t Cut = Data[i].Tcut;
+
 				Camera->SetImage(Cut);
+
 				Camera->Set(Room->Rid->Get(Cut)->ViewR >> 7, Room->Rid->Get(Cut)->View_p, Room->Rid->Get(Cut)->View_r);
+
+				Room->Rvd->GetFrustum(Cut, Camera->m_Frustum);
+
 				SetLighting();
+
 				return;
 			}
 		}

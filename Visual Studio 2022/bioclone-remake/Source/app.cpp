@@ -104,6 +104,8 @@ void Global_Application::RenderScene(void)
 
 		DrawFloor();
 
+		DrawScenario();
+
 		Player->Routine();
 
 		if (IsPanelType(PanelType::RoomModel) && !b_FileOp.load() && Model.get() && Model != Player)
@@ -198,6 +200,8 @@ void Global_Application::Draw(void)
 
 		Options();
 
+		ScenarioDirectory();
+
 		Modal();
 
 		ImGui::PopStyleColor();
@@ -246,8 +250,12 @@ void Global_Application::Input(void)
 		}
 		else if (Room->IsOpen() && !Camera->b_ViewTopDown && !Camera->b_ViewEditor)
 		{
-			uintmax_t i = Camera->SetImage(--Camera->m_Cut);
-			Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+			auto Cut = Camera->SetImage(--Camera->m_Cut);
+
+			Camera->Set(Room->Rid->Get(Cut)->ViewR >> 7, Room->Rid->Get(Cut)->View_p, Room->Rid->Get(Cut)->View_r);
+
+			Room->Rvd->GetFrustum(Cut, Camera->m_Frustum);
+
 			SetLighting();
 		}
 	}
@@ -261,8 +269,12 @@ void Global_Application::Input(void)
 		}
 		else if (Room->IsOpen() && !Camera->b_ViewTopDown && !Camera->b_ViewEditor)
 		{
-			uintmax_t i = Camera->SetImage(++Camera->m_Cut);
-			Camera->Set(Room->Rid->Get(i)->ViewR >> 7, Room->Rid->Get(i)->View_p, Room->Rid->Get(i)->View_r);
+			auto Cut = Camera->SetImage(++Camera->m_Cut);
+
+			Camera->Set(Room->Rid->Get(Cut)->ViewR >> 7, Room->Rid->Get(Cut)->View_p, Room->Rid->Get(Cut)->View_r);
+
+			Room->Rvd->GetFrustum(Cut, Camera->m_Frustum);
+
 			SetLighting();
 		}
 	}

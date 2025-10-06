@@ -73,6 +73,15 @@ void Global_Application::MainMenu(void)
 			ImGui::EndMenu();
 		}
 
+		if (ImGui::BeginMenu("Setup##MenuWindow"))
+		{
+			if (ImGui::MenuItem("Directory##SetupMenu"))
+			{
+				b_ViewScenarioSetup = !b_ViewScenarioSetup;
+			}
+			ImGui::EndMenu();
+		}
+
 		ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("?").x - ImGui::GetFontSize() / 2);
 
 		if (ImGui::BeginMenu("?##MenuWindow"))
@@ -241,6 +250,211 @@ void Global_Application::Options(void)
 		}
 	}
 
+	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+	{
+		static constexpr std::array<const char*, 6> PostProcessingShaders =
+		{
+			"None",
+			"Daguerreotype",
+			"Grayscale",
+			"Sepia",
+			"Posterization",
+			"Auto HDR"
+		};
+
+		if (ImGui::BeginCombo("Post Processing##OptionsWindow", PostProcessingShaders[Render->iPostProcessor], ImGuiComboFlags_HeightLarge))
+		{
+			for (size_t i = 0; i < std::size(PostProcessingShaders); i++)
+			{
+				bool b_IsSelected = (Render->iPostProcessor == i);
+
+				if (ImGui::Selectable(PostProcessingShaders[i], b_IsSelected))
+				{
+					Render->iPostProcessor = i;
+				}
+
+				if (b_IsSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		if (Render->iPostProcessor == 1)
+		{
+			static float min = 0.0f;
+			static float max = 1.0f;
+
+			ImGui::SliderScalar("Intensity##OptionsWindow", ImGuiDataType_Float, &Render->m_VignetteIntensity, &min, &max, "%.2f");
+			ScrollFloatOnHover(&Render->m_VignetteIntensity, ImGuiDataType_Float, 0.01f, 0.0f, 1.0f);
+
+			ImGui::SliderScalar("Contrast##OptionsWindow", ImGuiDataType_Float, &Render->m_Contrast, &min, &max, "%.2f");
+			ScrollFloatOnHover(&Render->m_Contrast, ImGuiDataType_Float, 0.01f, 0.0f, 1.0f);
+		}
+		else if (Render->iPostProcessor == 2 || Render->iPostProcessor == 3)
+		{
+			static float min = 0.0f;
+			static float max = 1.0f;
+
+			ImGui::SliderScalar("Intensity##OptionsWindow", ImGuiDataType_Float, &Render->m_VignetteIntensity, &min, &max, "%.2f");
+			ScrollFloatOnHover(&Render->m_VignetteIntensity, ImGuiDataType_Float, 0.01f, 0.0f, 1.0f);
+
+			ImGui::SliderScalar("Vignette##OptionsWindow", ImGuiDataType_Float, &Render->m_VignetteRadius, &min, &max, "%.2f");
+			ScrollFloatOnHover(&Render->m_VignetteRadius, ImGuiDataType_Float, 0.01f, 0.0f, 1.0f);
+		}
+		else if (Render->iPostProcessor == 4)
+		{
+			static float min = 0.0f;
+			static float max = 256.0f;
+			ImGui::SliderScalar("Level##OptionsWindow", ImGuiDataType_Float, &Render->m_Posterization, &min, &max, "%.0f");
+			ScrollFloatOnHover(&Render->m_Posterization, ImGuiDataType_Float, 1.0f, 1.0f, 256.0f);
+		}
+		else if (Render->iPostProcessor == 5)
+		{
+			static float PaperWhitemin = 80.0f;
+			static float PaperWhitemax = 2000.0f;
+
+			static float StandardWhitemin = 80.0f;
+			static float StandardWhitemax = 120.0f;
+
+			static float Displaymin = 80.0f;
+			static float Displaymax = 2000.0f;
+
+			static float Alphamin = 0.0f;
+			static float Alphamax = 0.95f;
+
+			static float Shouldermin = 1.0f;
+			static float Shouldermax = 10.0f;
+
+			if (ImGui::SliderScalar("Paper White (nits)", ImGuiDataType_Float, &Render->m_PaperWhiteNits, &PaperWhitemin, &PaperWhitemax, "%.0f"))
+			{
+				Render->m_PaperWhiteNits = std::clamp(Render->m_PaperWhiteNits, Render->m_StandardWhiteNits, Render->m_DisplayMaxNits);
+			}
+			if (ScrollFloatOnHover(&Render->m_PaperWhiteNits, ImGuiDataType_Float, 1.0f, PaperWhitemin, PaperWhitemax))
+			{
+				Render->m_PaperWhiteNits = std::clamp(Render->m_PaperWhiteNits, Render->m_StandardWhiteNits, Render->m_DisplayMaxNits);
+			}
+
+			if (ImGui::SliderScalar("SDR White (nits)", ImGuiDataType_Float, &Render->m_StandardWhiteNits, &StandardWhitemin, &StandardWhitemax, "%.0f"))
+			{
+				if (Render->m_StandardWhiteNits > Render->m_PaperWhiteNits) { Render->m_StandardWhiteNits = Render->m_PaperWhiteNits; }
+			}
+			if (ScrollFloatOnHover(&Render->m_StandardWhiteNits, ImGuiDataType_Float, 1.0f, StandardWhitemin, StandardWhitemax))
+			{
+				if (Render->m_StandardWhiteNits > Render->m_PaperWhiteNits) { Render->m_StandardWhiteNits = Render->m_PaperWhiteNits; }
+			}
+
+			if (ImGui::SliderScalar("Display Max (nits)", ImGuiDataType_Float, &Render->m_DisplayMaxNits, &Displaymin, &Displaymax, "%.0f"))
+			{
+				if (Render->m_DisplayMaxNits < Render->m_PaperWhiteNits) { Render->m_PaperWhiteNits = Render->m_DisplayMaxNits; }
+			}
+			if (ScrollFloatOnHover(&Render->m_DisplayMaxNits, ImGuiDataType_Float, 1.0f, Displaymin, Displaymax))
+			{
+				if (Render->m_DisplayMaxNits < Render->m_PaperWhiteNits) { Render->m_PaperWhiteNits = Render->m_DisplayMaxNits; }
+			}
+
+			ImGui::SliderScalar("Shoulder Start", ImGuiDataType_Float, &Render->m_ShoulderAlpha, &Alphamin, &Alphamax, "%.2f");
+			ScrollFloatOnHover(&Render->m_ShoulderAlpha, ImGuiDataType_Float, 0.01f, Alphamin, Alphamax);
+
+			ImGui::SliderScalar("Shoulder Power", ImGuiDataType_Float, &Render->m_ShoulderPOW, &Shouldermin, &Shouldermax, "%.2f");
+			ScrollFloatOnHover(&Render->m_ShoulderPOW, ImGuiDataType_Float, 0.05f, Shouldermin, Shouldermax);
+		}
+	}
+
+	ImGui::SetWindowSize(ImVec2(ImGui::GetItemRectMax().x + ImGui::GetStyle().WindowPadding.x, ImGui::GetItemRectMax().y + ImGui::GetStyle().WindowPadding.y));
+
+	ImGui::End();
+}
+
+void Global_Application::ScenarioDirectory(void)
+{
+	if (!b_ViewScenarioSetup) { return; }
+
+	ImGui::Begin("Scenario Directories##ScenarioSetup", &b_ViewScenarioSetup, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
+
+	{
+		static char buf1[4096] = "";
+
+		std::memcpy(buf1, m_PlayerPath.string().c_str(), std::min<std::size_t>(m_PlayerPath.string().size(), sizeof(buf1) - 1));
+
+		ImGui::SetNextItemWidth(900.0f);
+
+		if (ImGui::InputText("Player", buf1, IM_ARRAYSIZE(buf1)))
+		{
+			m_PlayerPath = buf1;
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("...##Player"))
+		{
+			if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+
+			if (auto Directory = Window->GetFileDirectory(); Directory.has_value())
+			{
+				m_PlayerPath = Directory.value();
+			}
+
+			CoUninitialize();
+		}
+	}
+
+	{
+		static char buf2[4096] = "";
+
+		std::memcpy(buf2, m_EnemyPath.string().c_str(), std::min<std::size_t>(m_EnemyPath.string().size(), sizeof(buf2) - 1));
+
+		ImGui::SetNextItemWidth(900.0f);
+
+		if (ImGui::InputText("Enemy", buf2, IM_ARRAYSIZE(buf2)))
+		{
+			m_EnemyPath = buf2;
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("...##Enemy"))
+		{
+			if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+
+			if (auto Directory = Window->GetFileDirectory(); Directory.has_value())
+			{
+				m_EnemyPath = Directory.value();
+			}
+
+			CoUninitialize();
+		}
+	}
+
+	{
+		static char buf3[4096] = "";
+
+		std::memcpy(buf3, m_DoorPath.string().c_str(), std::min<std::size_t>(m_DoorPath.string().size(), sizeof(buf3) - 1));
+
+		ImGui::SetNextItemWidth(900.0f);
+
+		if (ImGui::InputText("Door", buf3, IM_ARRAYSIZE(buf3)))
+		{
+			m_DoorPath = buf3;
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("...##Door"))
+		{
+			if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+
+			if (auto Directory = Window->GetFileDirectory(); Directory.has_value())
+			{
+				m_DoorPath = Directory.value();
+			}
+
+			CoUninitialize();
+		}
+	}
+
 	ImGui::SetWindowSize(ImVec2(ImGui::GetItemRectMax().x + ImGui::GetStyle().WindowPadding.x, ImGui::GetItemRectMax().y + ImGui::GetStyle().WindowPadding.y));
 
 	ImGui::End();
@@ -354,6 +568,29 @@ void Global_Application::RenderWindow(void)
 			G->Render->Device()->SetPixelShaderConstantF(0, &m_TextureWidth, 1);
 			G->Render->Device()->SetPixelShaderConstantF(1, &m_TextureHeight, 1);
 
+			if (G->IsPanelType(PanelType::Pers3D) && G->Render->iPostProcessor == 1)
+			{
+				G->Render->Device()->SetPixelShaderConstantF(2, &G->Render->m_VignetteIntensity, 1);
+				G->Render->Device()->SetPixelShaderConstantF(3, &G->Render->m_Contrast, 1);
+			}
+			else if (G->IsPanelType(PanelType::Pers3D) && (G->Render->iPostProcessor == 2 || G->Render->iPostProcessor == 3))
+			{
+				G->Render->Device()->SetPixelShaderConstantF(2, &G->Render->m_VignetteIntensity, 1);
+				G->Render->Device()->SetPixelShaderConstantF(3, &G->Render->m_VignetteRadius, 1);
+			}
+			else if (G->IsPanelType(PanelType::Pers3D) && G->Render->iPostProcessor == 4)
+			{
+				G->Render->Device()->SetPixelShaderConstantF(2, &G->Render->m_Posterization, 1);
+			}
+			else if (G->IsPanelType(PanelType::Pers3D) && G->Render->iPostProcessor == 5)
+			{
+				G->Render->Device()->SetPixelShaderConstantF(2, &G->Render->m_PaperWhiteNits, 1);
+				G->Render->Device()->SetPixelShaderConstantF(3, &G->Render->m_StandardWhiteNits, 1);
+				G->Render->Device()->SetPixelShaderConstantF(4, &G->Render->m_DisplayMaxNits, 1);
+				G->Render->Device()->SetPixelShaderConstantF(5, &G->Render->m_ShoulderAlpha, 1);
+				G->Render->Device()->SetPixelShaderConstantF(6, &G->Render->m_ShoulderPOW, 1);
+			}
+
 			G->Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
 			G->Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
 			G->Render->Device()->SetSamplerState(0, D3DSAMP_ADDRESSW, D3DTADDRESS_CLAMP);
@@ -364,7 +601,14 @@ void Global_Application::RenderWindow(void)
 
 			G->Render->SetVertexShader(D3DFVF_VERTCT);
 
-			G->Render->Device()->SetPixelShader(G->Render->PassthroughPixelShader.get());
+			if (G->IsPanelType(PanelType::Pers3D))
+			{
+				G->Render->Device()->SetPixelShader(G->Render->PostProcessor[G->Render->iPostProcessor]);
+			}
+			else
+			{
+				G->Render->Device()->SetPixelShader(G->Render->PassthroughPixelShader.get());
+			}
 		}, nullptr);
 
 	ImVec2 uv0 = ImVec2(0.0f, static_cast<float>(m_RenderHeight) / static_cast<float>(m_RenderDesc.Height));
@@ -576,6 +820,8 @@ void Global_Application::LeftPanel(ImVec2 Position, ImVec2 Size)
 	ImGui::Text(" Anim: %d / %d", Player->iClip.load(), Player->Animation(Player->AnimIndex())->IsOpen() ? Player->Animation(Player->AnimIndex())->GetClipCount() - 1 : 0);
 	ImGui::EndDisabled();
 
+	ImGui::Text(" AOT: %s", Sce->AotStr.c_str());
+
 	DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
 
 	ImGui::BeginDisabled(Camera->b_ViewEditor);
@@ -719,6 +965,201 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 
 			ImGui::EndTable();
 		}
+	}
+
+	if ((Room->Game() & BIO2) && ImGui::CollapsingHeader("Scenario##RightPanel", ImGuiTreeNodeFlags_None))	// TEMP: Bio2 only
+	{
+		bool b_Process = b_ScriptOp.load();
+		bool b_DrawSceAot = b_DrawAot.load();
+
+		if (ImGui::Checkbox("Draw AOT##ScenarioPanel", &b_DrawSceAot))
+		{
+			b_DrawAot.store(b_DrawSceAot);
+		}
+
+		if (ImGui::Checkbox("Process##ScenarioPanel", &b_Process))
+		{
+			b_ScriptOp.store(b_Process);
+
+			if (b_ScriptOp.load())
+			{
+				if (Room->GameType() & BIO2)
+				{
+					Room->Script->Initialize = [this]() -> void
+						{
+							Resident_Evil_2_Bytecode().SceSchedulerSet();
+						};
+
+					Room->Script->Routine = [this]() -> void
+						{
+							Resident_Evil_2_Bytecode().SceScheduler();
+						};
+
+					Room->Script->Initialize();
+				}
+			}
+			else
+			{
+				Room->Script->Routine = []() -> void {};
+			}
+
+			Room->Script->Initialize = []() -> void {};
+		}
+
+		static constexpr std::array<const char*, 25> GameFlags =
+		{
+			"System_flg",       // scalar
+			"Status_flg",       // scalar
+			"Stop_flg",         // scalar
+			"Scenario_flg",     // [8]
+			"Common_flg",       // [8]
+			"Room_flg",         // [2]
+			"Enemy_flg",        // [8]
+			"Enemy_flg2",       // [8]
+			"Item_flg",         // [8]
+			"Map_flg",          // [4]
+			"Use_flg",          // [4]
+			"Mess_flg",         // scalar
+			"Room_enemy_flg",   // scalar
+			"Pri_be_flg",       // [16][4] -> 64
+			"Zapping_flg",      // [2]
+			"Rbj_set_flg",      // scalar
+			"Key_flg",          // [2]
+			"Map_c_flg",        // [2]
+			"Map_i_flg",        // scalar
+			"Item_flg2",        // [4]
+			"Map_o_flg",        // scalar
+			"ExData0",          // [8]
+			"ExData1",          // [4]
+			"ExData2",          // [8]
+			"ExData3"           // [25]
+		};
+
+		static constexpr std::array<std::uint32_t, 25> GameFlagCount =
+		{
+			1,   // System_flg
+			1,   // Status_flg
+			1,   // Stop_flg
+			8,   // Scenario_flg
+			8,   // Common_flg
+			2,   // Room_flg
+			8,   // Enemy_flg
+			8,   // Enemy_flg2
+			8,   // Item_flg
+			4,   // Map_flg
+			4,   // Use_flg
+			1,   // Mess_flg
+			1,   // Room_enemy_flg
+			64,  // Pri_be_flg (16 * 4)
+			2,   // Zapping_flg
+			1,   // Rbj_set_flg
+			2,   // Key_flg
+			2,   // Map_c_flg
+			1,   // Map_i_flg
+			4,   // Item_flg2
+			1,   // Map_o_flg
+			8,   // ExData0
+			4,   // ExData1
+			8,   // ExData2
+			25   // ExData3
+		};
+
+		static int SelectedGameFlag = 0;
+		static int SelectedElement = 0;
+
+		ImGui::SetNextItemWidth(ImGui::CalcTextSize("Pri_be_flg").x * 2.0f);
+		if (ImGui::BeginCombo("##GameFlagSelect", GameFlags[SelectedGameFlag], ImGuiComboFlags_HeightLargest))
+		{
+			for (int i = 0; i < (int)GameFlags.size(); ++i)
+			{
+				bool b_Selected = (SelectedGameFlag == i);
+				if (ImGui::Selectable(GameFlags[i], b_Selected))
+				{
+					SelectedGameFlag = i;
+					SelectedElement = 0; // reset element index when switching group
+				}
+				if (b_Selected) ImGui::SetItemDefaultFocus();
+				ImGui::SameLine();
+				ImGui::TextDisabled("(%u)", GameFlagCount[i]);
+			}
+			ImGui::EndCombo();
+		}
+
+		ScrollComboOnHover("##GameFlagSelect", &SelectedGameFlag, ImGuiDataType_S32, 1, 0, 24, [&]() { SelectedElement = 0; });
+
+		std::uint32_t totalElems = GameFlagCount[SelectedGameFlag];
+		if (SelectedElement >= (int)totalElems) SelectedElement = 0;
+
+		auto GetFlagBasePtr = [&]() -> std::uint32_t*
+			{
+				switch (SelectedGameFlag)
+				{
+				case 0:  return &Sce->System_flg;
+				case 1:  return &Sce->Status_flg;
+				case 2:  return &Sce->Stop_flg;
+				case 3:  return Sce->SaveData.Scenario_flg;       // [8]
+				case 4:  return Sce->SaveData.Common_flg;         // [8]
+				case 5:  return Sce->SaveData.Room_flg;           // [2]
+				case 6:  return Sce->SaveData.Enemy_flg;          // [8]
+				case 7:  return Sce->SaveData.Enemy_flg2;         // [8]
+				case 8:  return Sce->SaveData.Item_flg;           // [8]
+				case 9:  return Sce->SaveData.Map_flg;            // [4]
+				case 10: return Sce->Use_flg;            // [4]
+				case 11: return &Sce->Mess_flg;
+				case 12: return &Sce->Room_enemy_flg;
+				case 13: return &Sce->SaveData.Pri_be_flg[0][0];  // [16][4] flattened
+				case 14: return Sce->SaveData.Zapping_flg;        // [2]
+				case 15: return &Sce->Rbj_set_flg;
+				case 16: return Sce->SaveData.Key_flg;            // [2]
+				case 17: return Sce->SaveData.Map_c_flg;          // [2]
+				case 18: return &Sce->SaveData.Map_i_flg;
+				case 19: return Sce->SaveData.Item_flg2;          // [4]
+				case 20: return &Sce->SaveData.Map_o_flg;
+				case 21: return Sce->SaveData.ExData0;            // [8]
+				case 22: return Sce->SaveData.ExData1;            // [4]
+				case 23: return Sce->SaveData.ExData2;            // [8]
+				case 24: return Sce->SaveData.ExData3;            // [25]
+				default: return nullptr;
+				}
+			};
+
+		std::uint32_t* base = GetFlagBasePtr();
+		if (!base)
+		{
+			ImGui::TextDisabled("Unavailable");
+			return;
+		}
+
+		if (totalElems > 1)
+		{
+			ImGui::SetNextItemWidth(ImGui::CalcTextSize("Element 000").x * 1.3f);
+			ImGui::SliderInt("Element##FlagElemIndex", &SelectedElement, 0, (int)totalElems == 1 ? 0 : (int)totalElems - 1);
+			ScrollOnHover(&SelectedElement, ImGuiDataType_S32, 1, 0, (int)totalElems == 1 ? 0 : (int)totalElems - 1);
+			TooltipOnHover("Index within this flag group");
+		}
+
+		std::uint32_t& Value = base[SelectedElement];
+
+		ImGui::Text("0x%08X", Value);
+
+		DrawHorizontalLine(4.0f, 8.0f, 1.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::BeginGroup();
+		for (int Bit = 0; Bit < 32; ++Bit)
+		{
+			bool BitSet = (Value & (1u << Bit)) != 0;
+			if (ImGui::Checkbox(("##FlagBit" + std::to_string(Bit)).c_str(), &BitSet))
+			{
+				if (BitSet) Value |= (1u << Bit);
+				else Value &= ~(1u << Bit);
+			}
+			if ((Bit % 8) != 7) ImGui::SameLine();
+		}
+		ImGui::EndGroup();
+
+		ImGui::Spacing();	if (ImGui::Button("All##FlagSetAll")) { Value = 0xFFFFFFFFu; }
+		ImGui::SameLine();	if (ImGui::Button("None##FlagClearAll")) { Value = 0; }
+		ImGui::SameLine();	if (ImGui::Button("Invert##FlagInvert")) { Value ^= 0xFFFFFFFFu; }
 	}
 
 	if (ImGui::CollapsingHeader("Collision##RightPanel", ImGuiTreeNodeFlags_None))

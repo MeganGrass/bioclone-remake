@@ -592,6 +592,12 @@
     <ClCompile Include="..\..\bio-lib\Common\bio_effect.cpp">
       <Filter>BioHazard\Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Common\bio_script.cpp">
+      <Filter>BioHazard\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_script.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Windows\resource.h">
@@ -754,9 +760,6 @@
       <Filter>BioHazard\Bio2\SCD</Filter>
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2\SCD\bio2_bytecode.h">
-      <Filter>BioHazard\Bio2\SCD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\bio-lib\Bio2\SCD\bio2_bytecode_map.h">
       <Filter>BioHazard\Bio2\SCD</Filter>
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Bio2\SCA\bio2_sca.h">
@@ -1002,6 +1005,9 @@
     <ClInclude Include="..\..\bio-lib\Bio1\ESP\bio1_esp.h">
       <Filter>BioHazard\Bio1\ESP</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_script.h">
+      <Filter>BioHazard\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Windows\icon.ico">
@@ -1052,6 +1058,21 @@
       <Filter>Standard\DX9\Shader</Filter>
     </FxCompile>
     <FxCompile Include="..\..\mstd-lib\DX9\shader\vertex.hlsl">
+      <Filter>Standard\DX9\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_daguerreotype.hlsl">
+      <Filter>Standard\DX9\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_grayscale.hlsl">
+      <Filter>Standard\DX9\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_sepia.hlsl">
+      <Filter>Standard\DX9\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_posterization.hlsl">
+      <Filter>Standard\DX9\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\mstd-lib\DX9\shader\post_auto_hdr.hlsl">
       <Filter>Standard\DX9\Shader</Filter>
     </FxCompile>
   </ItemGroup>

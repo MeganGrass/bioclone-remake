@@ -37,8 +37,284 @@ enum class PanelType : std::int32_t
 	Script = (1 << 5),
 };
 
+#pragma pack(push, 1)
+struct Scenario
+{
+	struct AOT
+	{
+		UCHAR Id;						// Sce ID
+		UCHAR Type;
+		UCHAR nFloor;
+		UCHAR Super;
+		SHORT X;
+		SHORT Z;
+		USHORT W;
+		USHORT D;
+		SHORT Xz[4][2];
+		USHORT Data0;
+		USHORT Data1;
+		USHORT Data2;
+		SHORT Next_pos_x;				// X Position of Player in next RDT
+		SHORT Next_pos_y;				// Y Position of Player in next RDT
+		SHORT Next_pos_z;				// Z Position of Player in next RDT
+		SHORT Next_cdir_y;				// Y Rotation of Player in next RDT
+		UCHAR Next_stage;				// Numerical ID of Stage for next RDT file
+		UCHAR Next_room;				// Numerical ID of Room for next RDT file
+		UCHAR Next_cut;					// Numerical ID of Cut for next RDT file
+		UCHAR Next_nfloor;				// Player distance from ground in next RDT (actual is nFloor * -1800)
+		UCHAR Dtex_type;				// Numerical ID of DO2 file
+		UCHAR Door_type;				// Numerical ID of DO2 animation
+		UCHAR Knock_type;				// Numerical ID of VAG sound from VAB soundbank (always 0x00)
+		UCHAR Key_id;					// G.Savegame.Key_flg bit (0x00 for unlocked door)
+		UCHAR Key_type;					// Numerical ID of Item required to unlock door
+		UCHAR Free;						// always 0x00
+		USHORT iItem;					// Numerical ID of Item
+		USHORT nItem;					// Numerical count of Item
+		USHORT Item_flg;				// G.Savegame.Item_flg or G.Savegame.Item_flg2 Bit
+		UCHAR Om_no;					// Numerical ID of MD1 model file (0xFF for none)
+		UCHAR Action;					// G.Ob_model[Om_no].Free0
+											// 0 = Stand to obtain
+											// 1 = Kneel to obtain
+											// 2 = G.Ob_model[Om_no].Be_flg = 0x80000000;
+		UCHAR Rnd_flg;					// Something to do with G.Savegame.Item_flg/Item_flg2
+		bool Is4P;						// if true, use SHORT Xz[4][2]
+										// if false, use SHORT X, Z, W, D
+	};
+
+	struct Task
+	{
+		uint8_t Routine0;
+		uint8_t Status;
+		int8_t Sub_ctr;
+		uint8_t Task_level;
+		int8_t Ifel_ctr[4];
+		int8_t Loop_ctr[4];
+		int8_t Loop_if_class[4][4];
+		uint8_t* Data;
+		uint8_t* Lstack[4][4];
+		uint8_t* Lbreak[4][4];
+		int16_t Lcnt[4][4];
+		uintptr_t Stack[4][8];	//uint32_t Stack[4][8];
+		uintptr_t* pS_SP;		//uint32_t* pS_SP;
+		uint8_t* Ret_addr[4];
+		std::shared_ptr<Resident_Evil_Model> pWork;
+		SVECTOR2 Speed{};
+		SVECTOR2 DSpeed{};
+		SVECTOR2 ASpeed{};
+		SVECTOR2 ADSpeed{};
+		uint32_t R_no_bak;
+	};
+
+	std::array<AOT, 32> Sce_aot{};
+
+	std::array<Task, 14> Sce_task{};
+
+	uint32_t Random_base{ 0 };
+	uint8_t* pCScd{ 0 };
+	std::shared_ptr<Resident_Evil_Model> pC_em{ nullptr };
+	POLY_GT4* pMizu_div{ 0 };
+	uint8_t Type{ 0 };
+	uint8_t Cut_old{ 0 };
+	uint8_t C_id{ 0 };
+	uint8_t C_model_type{ 0 };
+	uint8_t C_kind{ 0 };
+	uint8_t Mizu_div_max{ 0 };
+	uint8_t Mizu_div_ctr{ 0 };
+	uint8_t Rbj_reset_flg{ 0 };
+	uint8_t Se_tmp0{ 0 };
+	uint8_t Se_tmp1{ 0 };
+	uint8_t Se_vol{ 0 };
+
+	struct MONITOR
+	{
+		uintptr_t Gp;
+		struct TASK
+		{
+			uint16_t Tcb_status;
+			int16_t Tcb_sleep_ctr;
+			intptr_t* pTcb_pc;
+			uintptr_t Tcb_th;
+			struct TCB2
+			{
+				LONG Status;
+				LONG Mode;
+				LONG Zero;
+				LONG At;
+				LONG V0;
+				LONG V1;
+				LONG A0;
+				LONG A1;
+				LONG A2;
+				LONG A3;
+				LONG T0;
+				LONG T1;
+				LONG T2;
+				LONG T3;
+				LONG T4;
+				LONG T5;
+				LONG T6;
+				LONG T7;
+				LONG S0;
+				LONG S1;
+				LONG S2;
+				LONG S3;
+				LONG S4;
+				LONG S5;
+				LONG S6;
+				LONG S7;
+				LONG T8;
+				LONG T9;
+				LONG K0;
+				LONG K1;
+				LONG GP;
+				LONG SP;
+				LONG FP;
+				LONG RA;
+				LONG EPC;
+				LONG MDHI;
+				LONG MDLO;
+				LONG SR;
+				LONG CAUSE;
+				LONG Dummy0;
+				LONG Dummy1;
+				LONG Dummy2;
+				LONG System[6];
+			} pTcb;
+			uintptr_t Tcb_init_sp;
+			//EXEC Tcb_exec;
+			uintptr_t* pPc;
+			uint16_t R_no[6];
+			int16_t Ctr[8];
+			uint8_t Free[16];
+		} Task[3];
+		TASK* pCtcb;
+	} Monitor{};
+
+	struct SAVE_DATA
+	{
+		struct CARD
+		{
+			uint8_t magic[2];
+			uint8_t type;
+			uint8_t blockEntry;
+			uint8_t title[64];
+			uint8_t reserve[28];
+			uint8_t clut[32];
+			uint8_t icon[3][128];
+		} Card_Head{};
+		uint32_t Game_play_time{};
+		uint32_t Front_play_time{};
+		uint8_t Max_item_num{};
+		uint8_t Stereo{};
+		uint8_t Pl_id{};
+		uint8_t Save_area{};
+		uint8_t Vol_Se{};
+		uint8_t Vol_Bgm{};
+		uint8_t Key_idx{};
+		uint8_t Pl_poison_down{};
+		uint16_t Pl_poison_timer{};
+		uint16_t Dummy16{};
+		uint32_t Status_bak{};
+		uint8_t Equip_id{};
+		uint8_t Equip_no{};
+		int16_t Pl_life{};
+		uint16_t Zonbi_cnt{};
+		uint16_t Cure_cnt{};
+		uint16_t Save_cnt{};
+		int16_t Pl_pos_x{};
+		int16_t Pl_pos_y{};
+		int16_t Pl_pos_z{};
+		uint32_t Weapon_mugen{};
+		uint16_t Bgm_tbl[142]{};
+		int16_t F_atari{};
+		int16_t U_atari{};
+		int16_t Use_id{};
+		int16_t Get_id{};
+		int16_t Sce_work[8]{};
+		int16_t DSce_work[4]{};
+		int16_t Sce_tmp_work[8]{};
+		int16_t Stage_no{};
+		int16_t Room_no{};
+		int16_t Cut_no{};
+		int16_t Room_no_old{};
+		int16_t Cut_no_old{};
+		int16_t Sce_random{};
+		int16_t Player_life{};
+		int16_t Sce_timer{};
+		int16_t Change_player{};
+		int16_t Def_em_set{};
+		int16_t Def_aot_set{};
+		int16_t Count_down_timer{};
+		uint32_t Scenario_flg[8]{};
+		uint32_t Common_flg[8]{};
+		uint32_t Room_flg[2]{};
+		uint32_t Enemy_flg[8]{};
+		uint32_t Enemy_flg2[8]{};
+		uint32_t Item_flg[8]{};
+		uint32_t Item_flg2[4]{};
+		uint32_t Item_c_flg[7]{};
+		uint32_t Map_o_flg{};
+		uint32_t Map_flg[4]{};
+		uint32_t Map_c_flg[2]{};
+		uint32_t Map_i_flg{};
+		uint32_t Pri_be_flg[16][4]{};
+		uint32_t File_flg{};
+		uint32_t Zapping_flg[2]{};
+		uint32_t Key_flg[2]{};
+		struct ITEM
+		{
+			uint8_t Id{};
+			uint8_t Num{};
+			uint8_t Size{};
+			uint8_t dummy{};
+		} Item_work[11]{};
+		struct ITEM_BOX
+		{
+			uint8_t Id{};
+			uint8_t Num{};
+			uint8_t Size{};
+			uint8_t dummy{};
+		} Item_boxwork[64]{};
+		uint8_t File_tag_bk[24]{};
+		int16_t Dummy0{};
+		uint8_t Dummy1[2]{};
+		uint16_t Dummy[2]{};
+		uint32_t ExData0[8]{};
+		uint32_t ExData1[4]{};
+		uint32_t ExData2[8]{};
+		uint32_t ExData3[25]{};
+	} SaveData{};
+
+	uint32_t Random{};
+	uint32_t System_flg{};
+	uint32_t Status_flg{};
+	uint32_t Stop_flg{};
+	uint32_t Use_flg[4]{};
+	uint32_t Mess_flg{};
+	uint32_t Room_enemy_flg{};
+	uint32_t Room_player_flg{};
+	uint32_t Rbj_set_flg{};
+	uint32_t nSce_aot{};
+	uint8_t Next_cut_no{};
+	uint8_t Mirror_flg{};
+	uint16_t Mirror_pos{};
+	uint16_t Mirror_max{};
+	uint16_t Mirror_min{};
+
+	std::shared_ptr<Resident_Evil_Model> pEm;
+
+	Resident_Evil_2_RVD_Data* Cccut{ nullptr };
+	Resident_Evil_2_RVD_Data* Cccut_next{ nullptr };
+
+	// Is the player currently in an AOT hotspot?
+	const bool ProcessAOT(void);
+	std::string AotStr = "";
+
+};
+#pragma pack(pop)
+
 class Global_Application final :
-	public Resident_Evil_Common {
+	private Resident_Evil_Common {
 private:
 
 	String m_ConfigStr;
@@ -69,6 +345,7 @@ private:
 	bool b_IgnoreAutoResize;
 
 	bool b_ViewWindowOptions;
+	bool b_ViewScenarioSetup;
 	bool b_ShowFPS;
 
 	bool b_Shutdown;
@@ -86,6 +363,10 @@ private:
 	Standard_Thread_Pool FileOp;
 	std::atomic<bool> b_FileOp;
 
+	Standard_Thread_Pool ScriptOp;
+	std::atomic<bool> b_ScriptOp;
+	std::atomic<bool> b_DrawAot;
+
 	std::filesystem::path m_RoomcutNameID;
 	float m_RoomcutProgress;
 
@@ -95,16 +376,6 @@ private:
 
 	std::filesystem::path m_BootPlayerFilename;
 	std::filesystem::path m_BootWeaponFilename;
-	std::shared_ptr<Resident_Evil_Model> Player;
-	std::unique_ptr<StateMachineType> m_PlayerState;
-
-	std::unique_ptr<Resident_Evil_Geometry> Geometry;
-
-	std::unique_ptr<Resident_Evil_Camera> Camera;
-
-	std::shared_ptr<Resident_Evil_Room> Room;
-
-	std::shared_ptr<Sony_PlayStation_GTE> GTE;
 
 	std::unique_ptr<ImGuiContext, decltype(&ImGui::DestroyContext)> Context;
 
@@ -126,10 +397,7 @@ private:
 	void RoomcutModal(void);
 	void OnRoomcutComplete(std::filesystem::path Directory);
 
-	const bool IsRoomOpen(void);
 	void CloseRDT(const bool b_AskSave = false);
-	void OpenRDT(const std::filesystem::path Filename = L"", std::uintmax_t iCut = 0);
-	void SaveRDT(void);
 	void OpenModel(std::shared_ptr<Resident_Evil_Model>& Model, const bool b_LinkRoom, const std::filesystem::path Filename = L"");
 	void OpenModelTexture(std::shared_ptr<Resident_Evil_Model>& Model, const std::filesystem::path Filename = L"");
 	void SaveModelTexture(std::shared_ptr<Resident_Evil_Model>& Model);
@@ -153,14 +421,14 @@ private:
 	void DrawCollision(void);
 	void DrawBlock(void);
 	void DrawFloor(void);
+	void DrawScenario(void);
 	void DrawEffect(std::size_t iElement, VECTOR2 Position, const float Scale = 1.0f / (ONE / 32));
-	void ResetLighting(void) const;
-	void SetLighting(void);
 	void Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox);
 	void CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox);
 
 	void MainMenu(void);
 	void Options(void);
+	void ScenarioDirectory(void);
 	void ControllerMapping(void);
 	void RenderWindow(void);
 	void SetCenterPanel(PanelType Type);
@@ -194,6 +462,25 @@ private:
 
 public:
 
+	std::unique_ptr<Scenario> Sce;
+
+	std::unique_ptr<StateMachineType> m_PlayerState;
+
+	std::shared_ptr<Resident_Evil_Model> Player;
+	std::shared_ptr<Resident_Evil_Model> SubPlayer;
+	std::vector<std::shared_ptr<Resident_Evil_Model>> Enemy;
+	std::vector<std::shared_ptr<Resident_Evil_Model>> Door;
+
+	std::unique_ptr<Resident_Evil_Geometry> Geometry;
+
+	std::unique_ptr<Resident_Evil_Camera> Camera;
+
+	std::shared_ptr<Resident_Evil_Room> Room;
+
+	std::filesystem::path m_PlayerPath;
+	std::filesystem::path m_EnemyPath;
+	std::filesystem::path m_DoorPath;
+
 	bool b_Active;
 
 	bool b_SetMaxRenderSize;
@@ -202,6 +489,14 @@ public:
 
 	std::shared_ptr<Standard_DirectX_9> Render;
 
+	std::shared_ptr<Sony_PlayStation_GTE> GTE;
+
+	const bool IsRoomOpen(void);
+	void OpenRDT(const std::filesystem::path Filename = L"", std::uintmax_t iCut = 0);
+	void SaveRDT(void);
+	void SetLighting(void);
+	void ResetLighting(void) const;
+
 	Global_Application(void) :
 		Context(nullptr, &ImGui::DestroyContext),
 		Window{ std::make_unique<Standard_Window>() },
@@ -209,7 +504,9 @@ public:
 		GTE{ std::make_shared<Sony_PlayStation_GTE>() },
 		Gamepad{ std::make_unique<Resident_Evil_Gamepad>() },
 		Player{ std::make_shared<Resident_Evil_Model>() },
+		SubPlayer{ std::make_shared<Resident_Evil_Model>() },
 		Room{ std::make_shared<Resident_Evil_Room>() },
+		Sce{ std::make_unique<Scenario>() },
 		m_PanelType(PanelType::Pers3D),
 		m_ConfigStr(),
 		m_BorderColor{},
@@ -239,6 +536,7 @@ public:
 		b_IgnoreAutoResize(false),
 		b_SetMaxRenderSize(false),
 		b_ViewWindowOptions(false),
+		b_ViewScenarioSetup(false),
 		b_ShowFPS(false),
 		b_Shutdown(false),
 		b_PerVertexLighting(false),
@@ -248,8 +546,11 @@ public:
 	{
 		b_ModalOp.store(false);
 		b_FileOp.store(false);
+		b_ScriptOp.store(true);
+		b_DrawAot.store(true);
 		MainOp.InitPool(1);
 		FileOp.InitPool(1);
+		ScriptOp.InitPool(1);
 		Camera = std::make_unique<Resident_Evil_Camera>(Render, GTE);
 		Geometry = std::make_unique<Resident_Evil_Geometry>(Render, GTE);
 		Modal = [&]() {};
