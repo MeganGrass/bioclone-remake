@@ -65,6 +65,7 @@
     <ClCompile Include="..\..\bio-lib\Common\bio_gamepad.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_geometry.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_animation.cpp" />
+    <ClCompile Include="..\..\bio-lib\Common\bio_message.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_model.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_room.cpp" />
     <ClCompile Include="..\..\bio-lib\Common\bio_script.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="Source\app_edit_collision.cpp" />
     <ClCompile Include="Source\app_edit_effect.cpp" />
     <ClCompile Include="Source\app_edit_model.cpp" />
+    <ClCompile Include="Source\app_edit_scenario.cpp" />
     <ClCompile Include="Source\app_file.cpp" />
     <ClCompile Include="Source\app_imgui.cpp" />
     <ClCompile Include="Source\app_roomcut.cpp" />
@@ -218,6 +220,7 @@
     <ClInclude Include="..\..\bio-lib\Common\bio_gamepad.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_geometry.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_animation.h" />
+    <ClInclude Include="..\..\bio-lib\Common\bio_message.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_model.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_room.h" />
     <ClInclude Include="..\..\bio-lib\Common\bio_script.h" />

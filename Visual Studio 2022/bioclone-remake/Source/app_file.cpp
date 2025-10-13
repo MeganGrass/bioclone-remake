@@ -37,11 +37,31 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 {
 	b_FileOp.store(true);
 
+	uintmax_t m_StageOld = Room->m_Stage;
+
+	auto InitializeFont = [&]()
+		{
+			if (Room->m_Stage != m_StageOld && !m_DataPath.empty())
+			{
+				std::filesystem::path m_File = Standard_String().FormatCStyle(L"%ws\\font%d.tim", m_DataPath.wstring().c_str(), Room->m_Stage);
+				if (Standard_FileSystem().Exists(m_File)) { Message->OpenFont(m_File, Room->m_Stage); return; }
+
+				m_File = Standard_String().FormatCStyle(L"%ws\\st%d_font.tim", m_DataPath.wstring().c_str(), Room->m_Stage);
+				if (Standard_FileSystem().Exists(m_File)) { Message->OpenFont(m_File, Room->m_Stage); return; }
+			}
+		};
+
 	auto InitializeRoom = [&](const std::filesystem::path _Filename, const bool b_AskSave)
 		{
+			bool b_ScriptRunning = b_ScriptOp.load();
+
+			b_ScriptOp.store(false);
+
 			CloseRDT(b_AskSave);
 
 			Room->Open(_Filename);
+
+			InitializeFont();
 
 			Camera->m_Cx = GTE->ToFloat(Room->Sca->GetHeader()->Cx);
 			Camera->m_Cz = GTE->ToFloat(Room->Sca->GetHeader()->Cz);
@@ -59,7 +79,7 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 
 			if (Player->b_ControllerMode)
 			{
-				m_PlayerState->Set(Idle);
+				Player->State()->Set(Idle);
 			}
 			else
 			{
@@ -72,11 +92,14 @@ void Global_Application::OpenRDT(const std::filesystem::path Filename, std::uint
 
 			Room->Script->Initialize();
 			Room->Script->Initialize = []() -> void {};
+
+			b_ScriptOp.store(b_ScriptRunning);
 		};
 
 	if (!Filename.empty() && Standard_FileSystem().Exists(Filename))
 	{
 		InitializeRoom(Filename, false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(150));
 		b_FileOp.store(false);
 		return;
 	}

@@ -9,6 +9,155 @@
 
 std::shared_ptr<Resident_Evil_Model> Global_Application::Model = std::shared_ptr<Resident_Evil_Model>();
 
+void Global_Application::SceModelEditor(void)
+{
+	if (ImGui::CollapsingHeader("Player##RightPanel", ImGuiTreeNodeFlags_None))
+	{
+		TooltipOnHover("Position, Rotation and Scale");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::BeginDisabled((!Player->ModelDX9() || !Player->WeaponModelDX9()));
+		if (ImGui::MenuItem(" Controller##ModelEditor", NULL, &Player->b_ControllerMode))
+		{
+			SetController(Player->b_ControllerMode);
+		}
+		TooltipOnHover("Controller input on/off\r\n\r\nWeapon must be open");
+		ImGui::EndDisabled();
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::MenuItem(" Collision##ModelEditor", NULL, &Geometry->b_CollisionDetection);
+		TooltipOnHover("Collision detection on/off");
+
+		ImGui::MenuItem(" Cam Switch##ModelEditor", NULL, &Geometry->b_SwitchDetection);
+		TooltipOnHover("Camera switch detection on/off");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::MenuItem(" Vertex Light##ModelRender", NULL, &b_PerVertexLighting)) { if (b_PerVertexLighting) { b_PerPixelLighting = false; } }
+		TooltipOnHover("Per-Vertex Lighting");
+
+		if (ImGui::MenuItem(" Pixel Light##ModelRender", NULL, &b_PerPixelLighting)) { if (b_PerPixelLighting) { b_PerVertexLighting = false; } }
+		TooltipOnHover("Per-Pixel Lighting");
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		ImGui::BeginDisabled(!Player->b_ControllerMode);
+		if (ImGui::BeginTable("ModelHealthPanel##ModelRenderHealth", 2))
+		{
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(ImGui::CalcTextSize("Health").x);
+			ImGui::Text(" Health");
+
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+			ImGui::SliderScalar("##ModelRenderHealth", ImGuiDataType_S32, &Player->iHealth, &Player->iHealthMin, &Player->iHealthMax);
+			ScrollOnHover(&Player->iHealth, ImGuiDataType_S32, 1, Player->iHealthMin, Player->iHealthMax);
+
+			ImGui::EndTable();
+		}
+		ImGui::EndDisabled();
+
+		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
+
+		if (ImGui::BeginTable("Transform##PlayerRightPanel", 4))
+		{
+			ImGui::TableSetupColumn("Label##PlayerRightPanel", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("____").x);
+			ImGui::TableSetupColumn("X##PlayerRightPanel");
+			ImGui::TableSetupColumn("Y##PlayerRightPanel");
+			ImGui::TableSetupColumn("Z##PlayerRightPanel");
+			ImGui::TableNextRow();
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" Pos");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelPosX", ImGuiDataType_S32, &Player->Position().x))
+				{
+					Player->Position().x = std::clamp(Player->Position().x, -32767, 32767);
+				}
+				ScrollOnHover(&Player->Position().x, ImGuiDataType_S32, 32, -32767, 32767);
+				TooltipOnHover("Position X");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelPosY", ImGuiDataType_S32, &Player->Position().y))
+				{
+					Player->Position().y = std::clamp(Player->Position().y, -32767, 32767);
+				}
+				ScrollOnHover(&Player->Position().y, ImGuiDataType_S32, 32, -32767, 32767);
+				TooltipOnHover("Position Y");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelPosZ", ImGuiDataType_S32, &Player->Position().z))
+				{
+					Player->Position().z = std::clamp(Player->Position().z, -32767, 32767);
+				}
+				ScrollOnHover(&Player->Position().z, ImGuiDataType_S32, 32, -32767, 32767);
+				TooltipOnHover("Position Z");
+			}
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" Rot");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelRotX", ImGuiDataType_S32, &Player->Rotation().x))
+				{
+					Player->Rotation().x = std::clamp(Player->Rotation().x, -4096, 4096);
+				}
+				ScrollOnHover(&Player->Rotation().x, ImGuiDataType_S32, 32, -4096, 4096);
+				TooltipOnHover("Rotation X");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelRotY", ImGuiDataType_S32, &Player->Rotation().y))
+				{
+					Player->Rotation().y = std::clamp(Player->Rotation().y, -4096, 4096);
+				}
+				ScrollOnHover(&Player->Rotation().y, ImGuiDataType_S32, 32, -4096, 4096);
+				TooltipOnHover("Rotation Y");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelRotZ", ImGuiDataType_S32, &Player->Rotation().z))
+				{
+					Player->Rotation().z = std::clamp(Player->Rotation().z, -4096, 4096);
+				}
+				ScrollOnHover(&Player->Rotation().z, ImGuiDataType_S32, 32, -4096, 4096);
+				TooltipOnHover("Rotation Z");
+			}
+
+			{
+				ImGui::TableNextColumn(); ImGui::Text(" Sx");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelScaleX", ImGuiDataType_S32, &Player->Scale().x))
+				{
+					Player->Scale().x = std::clamp(Player->Scale().x, 0, 32768);
+				}
+				ScrollOnHover(&Player->Scale().x, ImGuiDataType_S32, 512, 0, 32768);
+				TooltipOnHover("Scale X");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelScaleY", ImGuiDataType_S32, &Player->Scale().y))
+				{
+					Player->Scale().y = std::clamp(Player->Scale().y, 0, 32768);
+				}
+				ScrollOnHover(&Player->Scale().y, ImGuiDataType_S32, 512, 0, 32768);
+				TooltipOnHover("Scale Y");
+
+				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
+				if (ImGui::InputScalar("##PlayerRightPanelScaleZ", ImGuiDataType_S32, &Player->Scale().z))
+				{
+					Player->Scale().z = std::clamp(Player->Scale().z, 0, 32768);
+				}
+				ScrollOnHover(&Player->Scale().z, ImGuiDataType_S32, 512, 0, 32768);
+				TooltipOnHover("Scale Z");
+			}
+
+			ImGui::EndTable();
+		}
+	}
+}
+
 void Global_Application::ModelEditor(const bool b_RoomModel)
 {
 	if (b_FileOp.load()) { return; }

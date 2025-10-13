@@ -598,6 +598,12 @@
     <ClCompile Include="Source\app_script.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\bio-lib\Common\bio_message.cpp">
+      <Filter>BioHazard\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\app_edit_scenario.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Windows\resource.h">
@@ -1006,6 +1012,9 @@
       <Filter>BioHazard\Bio1\ESP</Filter>
     </ClInclude>
     <ClInclude Include="..\..\bio-lib\Common\bio_script.h">
+      <Filter>BioHazard\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\bio-lib\Common\bio_message.h">
       <Filter>BioHazard\Common</Filter>
     </ClInclude>
   </ItemGroup>

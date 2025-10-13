@@ -7,6 +7,22 @@
 
 #include "app.h"
 
+/*
+*	Routine 1
+*		0  - Idle
+*		1  - Walk Forward
+*		2  - Run
+*		3  - Walk Backward
+*		4  - Turn
+*		5  - Aim
+*		6  - Kneel to pickup Item
+*		7  - Turn toward stairs + stairs routine
+*		8  - Climb Up
+*		9  - Jump Down
+*		10 - Push Object
+*		11 - Rotate to divisible of 1024, walk forward
+*/
+
 static constexpr Resident_Evil_Key NONE = Resident_Evil_Key::NONE;
 static constexpr Resident_Evil_Key UP = Resident_Evil_Key::UP;
 static constexpr Resident_Evil_Key RIGHT = Resident_Evil_Key::RIGHT;
@@ -509,6 +525,13 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		State->Add(Idle,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 0;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg &= ~(STAT_AUTO_MOVE | 0x80);
+
 				if ((State->KeyState() & LEFT) != Resident_Evil_Key{} || (State->KeyState() & RIGHT) != Resident_Evil_Key{})
 				{
 					State->Set(Idle_Turn);
@@ -564,6 +587,13 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		State->Add(Idle_Turn,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 4;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg &= ~(STAT_AUTO_MOVE | 0x80);
+
 				if (State->Model()->IsHealthCaution() && Walk_Backward_Caution.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
 				{
 					State->Init(Walk_Backward_Caution, 0, false, false, true);
@@ -686,6 +716,15 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		State->Add(Walk_Backward,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 3;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg &= ~(STAT_AUTO_MOVE | 0x80);
+
+				G->Sce->Room_player_flg |= 2;
+
 				if (State->Model()->IsHealthCaution() && Walk_Backward_Caution.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
 				{
 					State->Init(Walk_Backward_Caution, 0, false, false, false);
@@ -725,6 +764,15 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		State->Add(Walk_Forward,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 1;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg &= ~(STAT_AUTO_MOVE | 0x80);
+
+				G->Sce->Room_player_flg |= 2;
+
 				if (State->Model()->IsHealthCaution() && Walk_Forward_Caution.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
 				{
 					State->Init(Walk_Forward_Caution, 0, false, false, true);
@@ -764,6 +812,15 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		State->Add(Run,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 2;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg &= ~(STAT_AUTO_MOVE | 0x80);
+
+				G->Sce->Room_player_flg |= 4;
+
 				if (State->Model()->IsHealthDanger() && Run_Danger.GetClip() != std::to_underlying(AnimStateCustom::Dummy))
 				{
 					State->Init(Run_Danger, 0, false, false, true);
@@ -797,11 +854,57 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		);
 	}
 
+	// Inspect Kneel
+	{
+		State->Add(Inspect_Kneel,
+			[&]()
+			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 6;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg |= (STAT_AUTO_MOVE | 0x80);
+
+				State->Init(Inspect_Kneel, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					const auto m_FrameCount = State->Model()->Animation(Inspect_Kneel.GetIndex())->GetFrameCount(Inspect_Kneel.GetClip());
+					const auto b_Complete = (State->Model()->iFrame.load() >= (m_FrameCount ? m_FrameCount - 1 : 0));
+
+					if (b_Complete)
+					{
+						State->Model()->b_PlayInReverse.store(true);
+
+						G->Sce->Status_flg |= STAT_STATUS_SCREEN;
+					}
+					else if (State->Model()->iFrame.load() == 0)
+					{
+						State->Set(Idle);
+					}
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
 	// Aim Begin
 	{
 		State->Add(Aim_Begin,
 			[&]()
 			{
+				State->Model()->Routine_0 = 1;
+				State->Model()->Routine_1 = 5;
+				State->Model()->Routine_2 = 0;
+				State->Model()->Routine_3 = 0;
+
+				G->Sce->Status_flg |= (STAT_AUTO_MOVE | 0x80);
+
 				if (State->Prior() == Aim)
 				{
 					size_t m_FrameCount = State->Model()->Animation(Aim_Begin.GetIndex())->GetFrameCount(Aim_Begin.GetClip()) - 1;
@@ -1434,6 +1537,26 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 		);
 	}
 
+	// Damage Front Minor
+	{
+		State->Add(Damage_Front_Minor,
+			[&]()
+			{
+				State->Init(Damage_Front_Minor, 0, true, false, false);
+			},
+			[&]()
+			{
+				if (!State->Model()->b_PlayAllFrames.load())
+				{
+					State->Set(Idle);
+				}
+			},
+			[&]()
+			{
+			}
+		);
+	}
+
 	// Death
 	{
 		State->Add(Death,
@@ -1458,7 +1581,13 @@ void Global_Application::InitPlayerState(std::shared_ptr<Resident_Evil_Model> Mo
 
 void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& State)
 {
-	if (!State || !State->Model()->b_ControllerMode || !State->Model()->b_IsAlive) { return; }
+	if (!State || !State->Model()->b_ControllerMode || !State->Model()->b_IsAlive || State->b_Sleep) { return; }
+
+	if (State->b_Inspect || State->b_Damage)
+	{
+		State->Update(NONE);
+		return;
+	}
 
 	Resident_Evil_Key m_KeyState = NONE;
 
@@ -1485,6 +1614,10 @@ void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& Stat
 	if (b_Right || b_Left)
 	{
 		VECTOR2& Rotation = State->Model()->b_EditorMode ? State->Model()->EditorRotation() : State->Model()->Rotation();
+
+		//byte local_18[8] = { 0x50, 0x30, 0x20, 0, 0, 0, 0, 0 };
+
+		//byte s__800a2694[12] = { 0x00, 0x10, 0x1F, 0x2D, 0x3A, 0x48, 0x52, 0x5A, 0x5E, 0x62, 0x69, 0x00 };
 
 		if (State->b_Reloading)
 		{
@@ -1572,6 +1705,8 @@ void Global_Application::ControllerInput(std::unique_ptr<StateMachineType>& Stat
 	if (!b_R1 && b_Cross && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
 	{
 		m_KeyState |= (INSPECT | CONFIRM);
+
+		G->Sce->Status_flg |= 0x100000;
 	}
 	else if (!b_R1 && b_Circle && !(State->b_AimBegin || State->b_Aiming || State->b_FireBegin || State->b_Firing || State->b_FireEnd))
 	{

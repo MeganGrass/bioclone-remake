@@ -90,6 +90,8 @@ void Global_Application::RenderScene(void)
 
 		if (Render->b_ViewAxis) { Render->DrawAxis(); }
 
+		DrawMessage();
+
 		DrawBackground();
 
 		DrawSprite();
@@ -287,6 +289,10 @@ void Global_Application::SetController(const bool b_OnOff)
 	if (!Player->b_ControllerMode)
 	{
 		Player->Controller = [&]() {};
+
+		Geometry->b_CollisionDetection = false;
+		Geometry->b_SwitchDetection = false;
+
 		return;
 	}
 
@@ -294,11 +300,14 @@ void Global_Application::SetController(const bool b_OnOff)
 	Player->b_LockPosition = true;
 	Player->b_DrawReference = false;
 
-	InitPlayerState(Player, m_PlayerState);
+	Geometry->b_CollisionDetection = true;
+	Geometry->b_SwitchDetection = true;
+
+	InitPlayerState(Player, Player->State());
 
 	Player->Controller = [this]() -> void
 		{
-			ControllerInput(m_PlayerState);
+			ControllerInput(Player->State());
 		};
 }
 
@@ -494,6 +503,25 @@ void Global_Application::InitGame(void)
 		ResetLighting();
 	}
 	{
+		Message->Str.hWnd = Window->Get();
+		Message->ResetCanvas();
+		Message->SetControllerPause(true);
+
+		if (!m_DataPath.empty())
+		{
+			std::filesystem::path m_File = Standard_String().FormatCStyle(L"%ws\\font0.tim", m_DataPath.wstring().c_str());
+
+			if (Standard_FileSystem().Exists(m_File)) { Message->OpenFont(m_File, 0); }
+
+			else
+			{
+				m_File = Standard_String().FormatCStyle(L"%ws\\tex.tim", m_DataPath.wstring().c_str());
+
+				if (Standard_FileSystem().Exists(m_File)) { Message->OpenFont(m_File, 0); }
+			}
+		}
+	}
+	{
 		Geometry->Init();
 	}
 	{
@@ -525,7 +553,7 @@ void Global_Application::InitGame(void)
 
 				Collision(Player->ModelType(), Player->Position(), Player->Hitbox());
 
-				CameraSwitch(Player->Position(), Player->Hitbox());
+				CameraSwitch(Player->Position());
 
 				if (Player->b_DrawHitbox) { Geometry->DrawCylinder(Player->HitboxShape(), Player->b_EditorMode ? Player->EditorRotation() : Player->Rotation(), 0x00C5C5C5, true); }
 
@@ -552,6 +580,12 @@ void Global_Application::InitGame(void)
 		{
 			SetController(true);
 		}
+
+		if (!Player->State())
+		{
+			Geometry->b_CollisionDetection = false;
+			Geometry->b_SwitchDetection = false;
+		}
 	}
 }
 
@@ -563,27 +597,53 @@ void Global_Application::Shutdown(void)
 
 	b_Shutdown = true;
 
-	Modal = []() {};
-
-	if (b_ModalOp.load())
 	{
-		b_ModalOp.store(false);
+		Modal = []() {};
 
+		if (b_ModalOp.load())
+		{
+			b_ModalOp.store(false);
+
+			auto StartTime = std::chrono::steady_clock::now();
+
+			while (true)
+			{
+				std::this_thread::yield();
+				if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
+			}
+		}
+	}
+
+	b_FileOp.store(true);
+
+	{
+		b_Pause.store(false);
+
+		Room->Script->Initialize = []() {};
+		Room->Script->Routine = []() {};
+
+		if (b_ScriptOp.load())
+		{
+			b_ScriptOp.store(false);
+
+			auto StartTime = std::chrono::steady_clock::now();
+
+			while (!ScriptOp.Stop())
+			{
+				std::this_thread::yield();
+				if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
+			}
+		}
+	}
+
+	{
 		auto StartTime = std::chrono::steady_clock::now();
 
-		while (true)
+		while (!MainOp.Stop())
 		{
 			std::this_thread::yield();
 			if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
 		}
-	}
-
-	auto StartTime = std::chrono::steady_clock::now();
-
-	while (!MainOp.Stop())
-	{
-		std::this_thread::yield();
-		if (std::chrono::steady_clock::now() - StartTime > std::chrono::seconds(1)) { break; }
 	}
 
 	Render->b_ViewGrid = false;
@@ -591,6 +651,25 @@ void Global_Application::Shutdown(void)
 	Render->b_ViewAxis = false;
 
 	Player->Shutdown();
+
+	SubPlayer->Shutdown();
+
+	auto ClearWork = [](auto& Container)
+		{
+			for (auto& Element : Container)
+			{
+				if (Element) { Element->Shutdown(); }
+			}
+
+			Container.clear();
+			Container.shrink_to_fit();
+		};
+
+	ClearWork(Door);
+
+	ClearWork(Enemy);
+
+	Message->Shutdown();
 
 	Geometry->Shutdown();
 

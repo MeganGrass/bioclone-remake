@@ -63,19 +63,19 @@ void Global_Application::MainMenu(void)
 		if (ImGui::BeginMenu("View##MenuWindow"))
 		{
 			if (ImGui::MenuItem("Fullscreen##ViewMenu", "F11")) { b_RequestFullscreen = true; }
-			ImGui::Separator();
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Setup##MenuWindow"))
+		{
 			if (ImGui::MenuItem("Controller Map##ViewMenu", NULL))
 			{
 				Modal = [&]() { ControllerMapping(); };
 			}
 			ImGui::Separator();
 			ImGui::MenuItem("Window Options##ViewMenu", NULL, &b_ViewWindowOptions);
-			ImGui::EndMenu();
-		}
-
-		if (ImGui::BeginMenu("Setup##MenuWindow"))
-		{
-			if (ImGui::MenuItem("Directory##SetupMenu"))
+			ImGui::Separator();
+			if (ImGui::MenuItem("Data Directory##SetupMenu"))
 			{
 				b_ViewScenarioSetup = !b_ViewScenarioSetup;
 			}
@@ -373,6 +373,33 @@ void Global_Application::ScenarioDirectory(void)
 	if (!b_ViewScenarioSetup) { return; }
 
 	ImGui::Begin("Scenario Directories##ScenarioSetup", &b_ViewScenarioSetup, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize);
+
+	{
+		static char buf1[4096] = "";
+
+		std::memcpy(buf1, m_DataPath.string().c_str(), std::min<std::size_t>(m_DataPath.string().size(), sizeof(buf1) - 1));
+
+		ImGui::SetNextItemWidth(900.0f);
+
+		if (ImGui::InputText("Data", buf1, IM_ARRAYSIZE(buf1)))
+		{
+			m_DataPath = buf1;
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("...##Data"))
+		{
+			if (FAILED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) { return; }
+
+			if (auto Directory = Window->GetFileDirectory(); Directory.has_value())
+			{
+				m_DataPath = Directory.value();
+			}
+
+			CoUninitialize();
+		}
+	}
 
 	{
 		static char buf1[4096] = "";
@@ -967,200 +994,7 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 		}
 	}
 
-	if ((Room->Game() & BIO2) && ImGui::CollapsingHeader("Scenario##RightPanel", ImGuiTreeNodeFlags_None))	// TEMP: Bio2 only
-	{
-		bool b_Process = b_ScriptOp.load();
-		bool b_DrawSceAot = b_DrawAot.load();
-
-		if (ImGui::Checkbox("Draw AOT##ScenarioPanel", &b_DrawSceAot))
-		{
-			b_DrawAot.store(b_DrawSceAot);
-		}
-
-		if (ImGui::Checkbox("Process##ScenarioPanel", &b_Process))
-		{
-			b_ScriptOp.store(b_Process);
-
-			if (b_ScriptOp.load())
-			{
-				if (Room->GameType() & BIO2)
-				{
-					Room->Script->Initialize = [this]() -> void
-						{
-							Resident_Evil_2_Bytecode().SceSchedulerSet();
-						};
-
-					Room->Script->Routine = [this]() -> void
-						{
-							Resident_Evil_2_Bytecode().SceScheduler();
-						};
-
-					Room->Script->Initialize();
-				}
-			}
-			else
-			{
-				Room->Script->Routine = []() -> void {};
-			}
-
-			Room->Script->Initialize = []() -> void {};
-		}
-
-		static constexpr std::array<const char*, 25> GameFlags =
-		{
-			"System_flg",       // scalar
-			"Status_flg",       // scalar
-			"Stop_flg",         // scalar
-			"Scenario_flg",     // [8]
-			"Common_flg",       // [8]
-			"Room_flg",         // [2]
-			"Enemy_flg",        // [8]
-			"Enemy_flg2",       // [8]
-			"Item_flg",         // [8]
-			"Map_flg",          // [4]
-			"Use_flg",          // [4]
-			"Mess_flg",         // scalar
-			"Room_enemy_flg",   // scalar
-			"Pri_be_flg",       // [16][4] -> 64
-			"Zapping_flg",      // [2]
-			"Rbj_set_flg",      // scalar
-			"Key_flg",          // [2]
-			"Map_c_flg",        // [2]
-			"Map_i_flg",        // scalar
-			"Item_flg2",        // [4]
-			"Map_o_flg",        // scalar
-			"ExData0",          // [8]
-			"ExData1",          // [4]
-			"ExData2",          // [8]
-			"ExData3"           // [25]
-		};
-
-		static constexpr std::array<std::uint32_t, 25> GameFlagCount =
-		{
-			1,   // System_flg
-			1,   // Status_flg
-			1,   // Stop_flg
-			8,   // Scenario_flg
-			8,   // Common_flg
-			2,   // Room_flg
-			8,   // Enemy_flg
-			8,   // Enemy_flg2
-			8,   // Item_flg
-			4,   // Map_flg
-			4,   // Use_flg
-			1,   // Mess_flg
-			1,   // Room_enemy_flg
-			64,  // Pri_be_flg (16 * 4)
-			2,   // Zapping_flg
-			1,   // Rbj_set_flg
-			2,   // Key_flg
-			2,   // Map_c_flg
-			1,   // Map_i_flg
-			4,   // Item_flg2
-			1,   // Map_o_flg
-			8,   // ExData0
-			4,   // ExData1
-			8,   // ExData2
-			25   // ExData3
-		};
-
-		static int SelectedGameFlag = 0;
-		static int SelectedElement = 0;
-
-		ImGui::SetNextItemWidth(ImGui::CalcTextSize("Pri_be_flg").x * 2.0f);
-		if (ImGui::BeginCombo("##GameFlagSelect", GameFlags[SelectedGameFlag], ImGuiComboFlags_HeightLargest))
-		{
-			for (int i = 0; i < (int)GameFlags.size(); ++i)
-			{
-				bool b_Selected = (SelectedGameFlag == i);
-				if (ImGui::Selectable(GameFlags[i], b_Selected))
-				{
-					SelectedGameFlag = i;
-					SelectedElement = 0; // reset element index when switching group
-				}
-				if (b_Selected) ImGui::SetItemDefaultFocus();
-				ImGui::SameLine();
-				ImGui::TextDisabled("(%u)", GameFlagCount[i]);
-			}
-			ImGui::EndCombo();
-		}
-
-		ScrollComboOnHover("##GameFlagSelect", &SelectedGameFlag, ImGuiDataType_S32, 1, 0, 24, [&]() { SelectedElement = 0; });
-
-		std::uint32_t totalElems = GameFlagCount[SelectedGameFlag];
-		if (SelectedElement >= (int)totalElems) SelectedElement = 0;
-
-		auto GetFlagBasePtr = [&]() -> std::uint32_t*
-			{
-				switch (SelectedGameFlag)
-				{
-				case 0:  return &Sce->System_flg;
-				case 1:  return &Sce->Status_flg;
-				case 2:  return &Sce->Stop_flg;
-				case 3:  return Sce->SaveData.Scenario_flg;       // [8]
-				case 4:  return Sce->SaveData.Common_flg;         // [8]
-				case 5:  return Sce->SaveData.Room_flg;           // [2]
-				case 6:  return Sce->SaveData.Enemy_flg;          // [8]
-				case 7:  return Sce->SaveData.Enemy_flg2;         // [8]
-				case 8:  return Sce->SaveData.Item_flg;           // [8]
-				case 9:  return Sce->SaveData.Map_flg;            // [4]
-				case 10: return Sce->Use_flg;            // [4]
-				case 11: return &Sce->Mess_flg;
-				case 12: return &Sce->Room_enemy_flg;
-				case 13: return &Sce->SaveData.Pri_be_flg[0][0];  // [16][4] flattened
-				case 14: return Sce->SaveData.Zapping_flg;        // [2]
-				case 15: return &Sce->Rbj_set_flg;
-				case 16: return Sce->SaveData.Key_flg;            // [2]
-				case 17: return Sce->SaveData.Map_c_flg;          // [2]
-				case 18: return &Sce->SaveData.Map_i_flg;
-				case 19: return Sce->SaveData.Item_flg2;          // [4]
-				case 20: return &Sce->SaveData.Map_o_flg;
-				case 21: return Sce->SaveData.ExData0;            // [8]
-				case 22: return Sce->SaveData.ExData1;            // [4]
-				case 23: return Sce->SaveData.ExData2;            // [8]
-				case 24: return Sce->SaveData.ExData3;            // [25]
-				default: return nullptr;
-				}
-			};
-
-		std::uint32_t* base = GetFlagBasePtr();
-		if (!base)
-		{
-			ImGui::TextDisabled("Unavailable");
-			return;
-		}
-
-		if (totalElems > 1)
-		{
-			ImGui::SetNextItemWidth(ImGui::CalcTextSize("Element 000").x * 1.3f);
-			ImGui::SliderInt("Element##FlagElemIndex", &SelectedElement, 0, (int)totalElems == 1 ? 0 : (int)totalElems - 1);
-			ScrollOnHover(&SelectedElement, ImGuiDataType_S32, 1, 0, (int)totalElems == 1 ? 0 : (int)totalElems - 1);
-			TooltipOnHover("Index within this flag group");
-		}
-
-		std::uint32_t& Value = base[SelectedElement];
-
-		ImGui::Text("0x%08X", Value);
-
-		DrawHorizontalLine(4.0f, 8.0f, 1.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		ImGui::BeginGroup();
-		for (int Bit = 0; Bit < 32; ++Bit)
-		{
-			bool BitSet = (Value & (1u << Bit)) != 0;
-			if (ImGui::Checkbox(("##FlagBit" + std::to_string(Bit)).c_str(), &BitSet))
-			{
-				if (BitSet) Value |= (1u << Bit);
-				else Value &= ~(1u << Bit);
-			}
-			if ((Bit % 8) != 7) ImGui::SameLine();
-		}
-		ImGui::EndGroup();
-
-		ImGui::Spacing();	if (ImGui::Button("All##FlagSetAll")) { Value = 0xFFFFFFFFu; }
-		ImGui::SameLine();	if (ImGui::Button("None##FlagClearAll")) { Value = 0; }
-		ImGui::SameLine();	if (ImGui::Button("Invert##FlagInvert")) { Value ^= 0xFFFFFFFFu; }
-	}
+	ScenarioEditor();
 
 	if (ImGui::CollapsingHeader("Collision##RightPanel", ImGuiTreeNodeFlags_None))
 	{
@@ -1169,151 +1003,7 @@ void Global_Application::RightPanel(ImVec2 Position, ImVec2 Size)
 		ImGui::EndDisabled();
 	}
 
-	if (ImGui::CollapsingHeader("Player##RightPanel", ImGuiTreeNodeFlags_None))
-	{
-		TooltipOnHover("Position, Rotation and Scale");
-
-		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		ImGui::BeginDisabled((!Player->ModelDX9() || !Player->WeaponModelDX9()));
-		if (ImGui::MenuItem(" Controller##ModelEditor", NULL, &Player->b_ControllerMode))
-		{
-			SetController(Player->b_ControllerMode);
-		}
-		TooltipOnHover("Controller input on/off\r\n\r\nWeapon must be open");
-		ImGui::EndDisabled();
-
-		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		ImGui::MenuItem(" Collision##ModelEditor", NULL, &Geometry->b_CollisionDetection);
-		TooltipOnHover("Collision detection on/off");
-
-		ImGui::MenuItem(" Cam Switch##ModelEditor", NULL, &Geometry->b_SwitchDetection);
-		TooltipOnHover("Camera switch detection on/off");
-
-		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		if (ImGui::MenuItem(" Vertex Light##ModelRender", NULL, &b_PerVertexLighting)) { if (b_PerVertexLighting) { b_PerPixelLighting = false; } }
-		TooltipOnHover("Per-Vertex Lighting");
-
-		if (ImGui::MenuItem(" Pixel Light##ModelRender", NULL, &b_PerPixelLighting)) { if (b_PerPixelLighting) { b_PerVertexLighting = false; } }
-		TooltipOnHover("Per-Pixel Lighting");
-
-		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		ImGui::BeginDisabled(!Player->b_ControllerMode);
-		if (ImGui::BeginTable("ModelHealthPanel##ModelRenderHealth", 2))
-		{
-			ImGui::TableNextColumn();
-			ImGui::SetNextItemWidth(ImGui::CalcTextSize("Health").x);
-			ImGui::Text(" Health");
-
-			ImGui::TableNextColumn();
-			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-			ImGui::SliderScalar("##ModelRenderHealth", ImGuiDataType_S32, &Player->iHealth, &Player->iHealthMin, &Player->iHealthMax);
-			ScrollOnHover(&Player->iHealth, ImGuiDataType_S32, 1, Player->iHealthMin, Player->iHealthMax);
-
-			ImGui::EndTable();
-		}
-		ImGui::EndDisabled();
-
-		DrawHorizontalLine(8.0f, 12.0f, 2.0f, m_BorderColor.r, m_BorderColor.g, m_BorderColor.b);
-
-		if (ImGui::BeginTable("Transform##PlayerRightPanel", 4))
-		{
-			ImGui::TableSetupColumn("Label##PlayerRightPanel", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("____").x);
-			ImGui::TableSetupColumn("X##PlayerRightPanel");
-			ImGui::TableSetupColumn("Y##PlayerRightPanel");
-			ImGui::TableSetupColumn("Z##PlayerRightPanel");
-			ImGui::TableNextRow();
-
-			{
-				ImGui::TableNextColumn(); ImGui::Text(" Pos");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelPosX", ImGuiDataType_S32, &Player->Position().x))
-				{
-					Player->Position().x = std::clamp(Player->Position().x, -32767, 32767);
-				}
-				ScrollOnHover(&Player->Position().x, ImGuiDataType_S32, 32, -32767, 32767);
-				TooltipOnHover("Position X");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelPosY", ImGuiDataType_S32, &Player->Position().y))
-				{
-					Player->Position().y = std::clamp(Player->Position().y, -32767, 32767);
-				}
-				ScrollOnHover(&Player->Position().y, ImGuiDataType_S32, 32, -32767, 32767);
-				TooltipOnHover("Position Y");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelPosZ", ImGuiDataType_S32, &Player->Position().z))
-				{
-					Player->Position().z = std::clamp(Player->Position().z, -32767, 32767);
-				}
-				ScrollOnHover(&Player->Position().z, ImGuiDataType_S32, 32, -32767, 32767);
-				TooltipOnHover("Position Z");
-			}
-
-			{
-				ImGui::TableNextColumn(); ImGui::Text(" Rot");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelRotX", ImGuiDataType_S32, &Player->Rotation().x))
-				{
-					Player->Rotation().x = std::clamp(Player->Rotation().x, -4096, 4096);
-				}
-				ScrollOnHover(&Player->Rotation().x, ImGuiDataType_S32, 32, -4096, 4096);
-				TooltipOnHover("Rotation X");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelRotY", ImGuiDataType_S32, &Player->Rotation().y))
-				{
-					Player->Rotation().y = std::clamp(Player->Rotation().y, -4096, 4096);
-				}
-				ScrollOnHover(&Player->Rotation().y, ImGuiDataType_S32, 32, -4096, 4096);
-				TooltipOnHover("Rotation Y");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelRotZ", ImGuiDataType_S32, &Player->Rotation().z))
-				{
-					Player->Rotation().z = std::clamp(Player->Rotation().z, -4096, 4096);
-				}
-				ScrollOnHover(&Player->Rotation().z, ImGuiDataType_S32, 32, -4096, 4096);
-				TooltipOnHover("Rotation Z");
-			}
-
-			{
-				ImGui::TableNextColumn(); ImGui::Text(" Sx");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelScaleX", ImGuiDataType_S32, &Player->Scale().x))
-				{
-					Player->Scale().x = std::clamp(Player->Scale().x, 0, 32768);
-				}
-				ScrollOnHover(&Player->Scale().x, ImGuiDataType_S32, 512, 0, 32768);
-				TooltipOnHover("Scale X");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelScaleY", ImGuiDataType_S32, &Player->Scale().y))
-				{
-					Player->Scale().y = std::clamp(Player->Scale().y, 0, 32768);
-				}
-				ScrollOnHover(&Player->Scale().y, ImGuiDataType_S32, 512, 0, 32768);
-				TooltipOnHover("Scale Y");
-
-				ImGui::TableNextColumn(); ImGui::SetNextItemWidth(ImGui::CalcTextSize("_______").x);
-				if (ImGui::InputScalar("##PlayerRightPanelScaleZ", ImGuiDataType_S32, &Player->Scale().z))
-				{
-					Player->Scale().z = std::clamp(Player->Scale().z, 0, 32768);
-				}
-				ScrollOnHover(&Player->Scale().z, ImGuiDataType_S32, 512, 0, 32768);
-				TooltipOnHover("Scale Z");
-			}
-
-			ImGui::EndTable();
-		}
-	}
+	SceModelEditor();
 
 	ImGui::End();
 }

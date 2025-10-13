@@ -5,6 +5,15 @@ Modification Utility and File Viewer for classic Resident Evil video games of th
 - This is an extremely early, complete rewrite, open-source version of "BioClone Redux"
 - This application is currently in a prolonged "Viewer/Gameplay" development cycle. Do not expect modification abilities, yet...
 
+## Images
+![3D Layout](/images/3d_layout.jpg?raw=true "3D Layout")
+![2D Layout](/images/2d_layout.jpg?raw=true "2D Layout")
+![Model Viewer](/images/model_viewer.jpg?raw=true "Model Viewer")
+![Room Model Viewer](/images/room_model_viewer.jpg?raw=true "Room Model Viewer")
+![Effect Sprite Viewer](/images/effect_sprite_viewer.jpg?raw=true "Effect Sprite Viewer")
+![Real-Time Scenario Processing](/images/scenario_processing.jpg?raw=true "Real-Time Scenario Processing")
+![Real-Time Scenario Interaction](/images/item_inspect.jpg?raw=true "Real-Time Scenario Interaction")
+
 ## Supported Games
  - Resident Evil / バイオハザード (August 1995 Prototype)
  - Resident Evil / バイオハザード (October 1995 Prototype)
@@ -75,50 +84,48 @@ Modification Utility and File Viewer for classic Resident Evil video games of th
 | :------- | :------- | :------------------------- | :------------------------- | :------------------------- |
 | `RID` |  | Camera FOV, Eye, At | Yes | 1 |
 | `PRI` |  | Camera Sprite Mask | Yes | 2 |
-| `RVD` |  | Camera Frustum, Switch Trigger Vector | Partial | 3 |
-| `LIT` |  | Lighting | Yes | 4 |
-| `SCA` |  | Collision | Yes | 5 |
-| `BLK` |  | Enemy Navigation Mesh | Partial | 6 |
-| `FLR` |  | Floor Sound Mesh | Partial | 7 |
+| `RVD` |  | Camera Frustum, Switch Trigger Vector | Yes | |
+| `LIT` |  | Lighting | Yes | 3 |
+| `SCA` |  | Collision | Yes | 4 |
+| `BLK` |  | Enemy Navigation Mesh | Partial | 5 |
+| `FLR` |  | Floor Sound Mesh | Partial | 6 |
 | `OTA` | Resident Evil 3 | unknown | No |  |
-| `SCD` |  | Script | Partial | 8 |
-| `MSG` |  | Text | Partial | 8 |
-| `PIX` | Resident Evil | Item Avatar Texture | Partial | 9 |
-| `PIX` | Resident Evil 2 | Camera Scroll Texture | Partial | 10 |
-| `ITEM` | Resident Evil | Sony PlayStation 3D Modeling Data | Partial | 11 |
-| `OBJECT` |  | 3D Modeling Data | Partial | 11 |
-| `ESP` |  | Effect Sprite Container | Partial | 12 |
+| `SCD` |  | Script | Partial | 7 |
+| `MSG` |  | Text | Partial | 7 |
+| `PIX` | Resident Evil | Item Avatar Texture | Partial | 8 |
+| `PIX` | Resident Evil 2 | Camera Scroll Texture | Partial | 9 |
+| `ITEM` | Resident Evil | Sony PlayStation 3D Modeling Data | Partial | 10 |
+| `OBJECT` |  | 3D Modeling Data | Partial | 10 |
+| `ESP` |  | Effect Sprite Container | Partial | 11 |
 | `RBJ` |  | Animation | Yes |  |
-| `EDT` |  | Soundbank Index and Attributes | Partial | 13 |
-| `VAB` |  | Sony PlayStation Soundbank | Partial | 14 |
+| `EDT` |  | Soundbank Index and Attributes | Partial | 12 |
+| `VAB` |  | Sony PlayStation Soundbank | Partial | 13 |
 
 - (1) Each game has a max limit: *Resident Evil* is 8, *Resident Evil 2 (November 1996 Prototype)* is 12, *Resident Evil 2* is 16 and *Resident Evil 3* is 32. In planning for future modification abilities, this app has no limit and will support RDTs that break these limits
 
 - (2) All versions of *Resident Evil 1* have camera sprite textures embedded into the RDT. They are not used in either the PC version or this application. There is one PRI per camera, which consists of individual groups of data used to place sprites onscreen to "mask" 3D models behind objects in the prerendered background to create the illusion of a full 3D environment
 
-- (3) Camera frustum culling is currently unimplemented
+- (3) Lighting is fully implemented. All versions of *Resident Evil 1* supports only three (3) lights per room. All others support three (3) lights per camera.
 
-- (4) All versions of *Resident Evil 1* supports only three (3) lights per room. All others support three (3) lights per camera
+- (4) Collision data in all versions of *Resident Evil 1* and *Resident Evil 2 (November 1996 Prototype)* is structured different from subsequent games, but function the same. They are converted to *Resident Evil 2 (retail)* type for upgraded abilities
 
-- (5) Collision data in all versions of *Resident Evil 1* and *Resident Evil 2 (November 1996 Prototype)* is structured different from subsequent games, but function the same. They are converted to *Resident Evil 2 (retail)* type for upgraded abilities
+- (5) Enemy Navigation Mesh is fully parsed and can be viewed. Enemy AI is unimplemented, so this data is not useful yet
 
-- (6) Enemy Navigation Mesh is fully parsed and can be viewed. Full support is currently unimplemented because enemies aren't yet loaded to navigate the mesh
+- (6) Floor Sound Mesh is fully parsed and can be viewed. Full support is currently unimplemented because audio support is currently unimplemented
 
-- (7) Floor Sound Mesh is fully parsed and can be viewed. Full support is currently unimplemented because audio support is currently unimplemented
+- (7) Scripts are loaded and processed in real-time (*Resident Evil 2*, only). Every game in the series uses different opcodes and bytecode to comprise this data, so support for other games will arrive later. Currently, in Resident Evil 2 rooms, the "player" can interact with nearly all AOT ("ahead of time") objects such as messages, doors, items and some events; full cutscene support is very early in implementation. Some custom (hacked) executables extend the opcode range with custom bytcode and *might* be supported in future versions of this app (probably via a config file). For now, custom opcodes will most definitely crash the app.
 
-- (8) Scripts are loaded but not parsed. Every game in the series uses different opcodes and bytecode to comprise this data. Once parsing is implemented, more features will become available, such as enemy loading, door/exit vectors, inspection messages, item/object model and effect sprite placement, etc. Some custom (hacked) executables extend the opcode range with custom bytcode and *might* be supported in future versions of this app (probably via a config file)
+- (8) Item Avatar Textures are unique to *Resident Evil 1* RDTs. They are 40 x 30 x 8bpp headerless TIM textures for use in the Inventory of the Status Screen. There is a single avatar texture for every Item Model. These textures are not unique; duplicates can be found in **PSX\DATA\ITEM_ALL.PIX** -- a container that holds every item avatar available in the entire game
 
-- (9) Item Avatar Textures are unique to *Resident Evil 1* RDTs. They are 40 x 30 x 8bpp headerless TIM textures for use in the Inventory of the Status Screen. There is a single avatar texture for every Item Model. These textures are not unique; duplicates can be found in **PSX\DATA\ITEM_ALL.PIX** -- a container that holds every item avatar available in the entire game
+- (9) Camera Scroll Texture is unique to *Resident Evil 2 (retail)* RDTs. They are 320 x 240 x 16bpp headerless TIM textures for use when the camera scrolls vertically (example: entering the RPD for the first time), and are used only in scripted events
 
-- (10) Camera Scroll Texture is unique to *Resident Evil 2 (retail)* RDTs. They are 320 x 240 x 16bpp headerless TIM textures for use when the camera scrolls vertically (example: entering the RPD for the first time), and are used only in scripted events
+- (10) Item Models are unique to *Resident Evil 1* RDTs. Object Models are universal (all games). These 3D models are representations of collectible items. Each game stores a different file type: TMD for *Resident Evil*, MD1 for *Resident Evil 2* and MD2 for *Resident Evil 3*. Item and Object models can be viewed in the **Item** editor tab
 
-- (11) Item Models are unique to *Resident Evil 1* RDTs. Object Models are universal (all games). These 3D models are representations of collectible items. Each game stores a different file type: TMD for *Resident Evil*, MD1 for *Resident Evil 2* and MD2 for *Resident Evil 3*. Item and Object models can be viewed in the **Item** editor tab
+- (11) Effect Sprite containers hold EFF and TIM which represent 2D sprites, such as fire, broken glass, gore, etc. *Resident Evil* and *Resident Evil 2* have a max capacity of 8, and *Resident Evil 3* is 16. Effect Sprites can be viewed in the **Effect** editor tab
 
-- (12) Effect Sprite containers hold EFF and TIM which represent 2D sprites, such as fire, broken glass, gore, etc. *Resident Evil* and *Resident Evil 2* have a max capacity of 8, and *Resident Evil 3* is 16. Effect Sprites can be viewed in the **Effect** editor tab
+- (12) Soundbank Index and Attribute data differs in each game, but it serves the same purpose. This data is used in conjunction with *Floor Mesh Data* and the embedded Sony PlayStation Soundbank data (VAB) to produce sound effects, such as footsteps
 
-- (13) Soundbank Index and Attribute data differs in each game, but it serves the same purpose. This data is used in conjunction with *Floor Mesh Data* and the embedded Sony PlayStation Soundbank data (VAB) to produce sound effects, such as footsteps
-
-- (14) Sony PlayStation Soundbank (VAB) contains audio samples, such as footsteps, fire, etc. This data is unused in PC versions; external ADPCM samples within a unique file container (SAP) located in the **Common\Sound\Room** directory is used instead
+- (13) Sony PlayStation Soundbank (VAB) contains audio samples, such as footsteps, fire, etc. This data is unused in PC versions; external ADPCM samples within a unique file container (SAP) located in the **Common\Sound\Room** directory is used instead
 
 ## Keyboard/Mouse
 | Option | Description                       | Mode                |
@@ -160,12 +167,16 @@ Modification Utility and File Viewer for classic Resident Evil video games of th
  - Model and Weapon game types are not interchangeable. For example, *Resident Evil* EMW cannot be used with *Resident Evil 2* PLD. This limitation is in-place due to different armature specifications per game. More specifically, joint indices are different for each game and do not match each other, creating incompatibilities when attempting to pair animation data between games
  - Gameplay Testing is available in both **3D Layout** and **Model** modes. In *3D Layout* mode, you may interact with collisions, camera switches, lighting and more in real-time when an **RDT** is open. In *Model* mode, you may simply view and test animations
 
-## Images
-![3D Layout](/images/3d_layout.jpg?raw=true "3D Layout")
-![2D Layout](/images/2d_layout.jpg?raw=true "2D Layout")
-![Model Viewer](/images/model_viewer.jpg?raw=true "Model Viewer")
-![Room Model Viewer](/images/room_model_viewer.jpg?raw=true "Room Model Viewer")
-![Effect Sprite Viewer](/images/effect_sprite_viewer.jpg?raw=true "Effect Sprite Viewer")
+## Extended Gameplay Setup
+For successful script/event processing, the app needs to know where to find run time assets (not provided)
+
+Setup via the main menu: Main Menu -> Setup -> Data Directory
+| Option | Description                       |
+| :-------- | :-------------------------------- |
+| `Data` | Fonts |
+| `Player` | Player Models and Weapons |
+| `Enemy` | Enemy Models |
+| `Door` | Door Models |
 
 ## TODO
 - a lot :)

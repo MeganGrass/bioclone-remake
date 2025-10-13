@@ -7,6 +7,54 @@
 
 #include "app.h"
 
+void Global_Application::DrawMessage(void)
+{
+	if (!IsRoomOpen() || Camera->b_ViewEditor || Message->IsBlank()) { return; }
+
+	const float Left = 0.0f;
+	const float Top = 0.0f;
+	const float Right = static_cast<float>(m_RenderWidth);
+	const float Bottom = static_cast<float>(m_RenderHeight);
+
+#if MSTD_DX9
+	const float L = Left - 0.5f;
+	const float T = Top + 0.5f;
+	const float R = Right - 0.5f;
+	const float B = Bottom + 0.5f;
+#else
+	const float L = Left;
+	const float T = Top;
+	const float R = Right;
+	const float B = Bottom;
+#endif
+
+	std::vector<vec4t> Vector =
+	{
+		{ vec4{ L, T, 0.0f, 1.0f }, vec2{ 0.0f, 0.0f } },
+		{ vec4{ R, T, 0.0f, 1.0f }, vec2{ 1.0f, 0.0f } },
+		{ vec4{ L, B, 0.0f, 1.0f }, vec2{ 0.0f, 1.0f } },
+		{ vec4{ R, B, 0.0f, 1.0f }, vec2{ 1.0f, 1.0f } },
+	};
+
+#if MSTD_DX9
+	Render->SetPSXLightToggle(false, true);
+
+	Render->TextureFiltering(D3DTEXF_NONE);
+
+	Render->SetDepthScale(0.0f, 0.0f);
+
+	Render->AlphaTesting(TRUE, 0xFF, D3DCMP_GREATEREQUAL);
+
+	std::unique_ptr<IDirect3DVertexBuffer9, IDirect3DDelete9<IDirect3DVertexBuffer9>> Vertices;
+	Vertices.reset(Render->CreateVec4t(Vector));
+
+	Render->DrawVec4t(
+		Vertices.get(), Message->m_Canvas.get(), Render->PassthroughPixelShader.get(),
+		Camera->m_NativeWidth, Camera->m_NativeHeight,
+		(D3DXMATRIX*)Camera->Orthogonal.get());
+#endif
+}
+
 void Global_Application::DrawBackground(void)
 {
 	if (!IsRoomOpen() || Camera->b_ViewTopDown || !Camera->b_ViewBackground || !Camera->m_Background) { return; }
@@ -83,7 +131,8 @@ void Global_Application::DrawSprite(void)
 	if (!IsRoomOpen() || Camera->b_ViewTopDown || !Camera->b_ViewSprite) { return; }
 
 	{
-		Render->SetDepthScale(-1.013f, -2048.000f);
+		//Render->SetDepthScale(-1.013f, -2048.0f);
+		Render->SetDepthScale(-1.0f, -384.0f);
 
 		Render->AlphaBlending(TRUE, D3DBLEND_SRCALPHA, D3DBLEND_INVSRCALPHA);
 
@@ -239,7 +288,7 @@ void Global_Application::DrawFloor(void)
 
 void Global_Application::DrawScenario(void)
 {
-	if (!IsRoomOpen() || !b_ScriptOp.load() || Camera->b_ViewEditor) { return; }
+	if (!IsRoomOpen() || !b_ScriptOp.load() || b_FileOp.load() || Camera->b_ViewEditor) { return; }
 
 	ScriptOp.Enqueue([this]()
 		{
@@ -516,7 +565,7 @@ void Global_Application::Collision(ModelType ModelType, VECTOR2& Position, SIZEV
 	}
 }
 
-void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
+void Global_Application::CameraSwitch(VECTOR2 Position)
 {
 	if (!IsRoomOpen() || !Geometry->b_SwitchDetection) { return; }
 
@@ -534,9 +583,11 @@ void Global_Application::CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox)
 		{
 			if (Geometry->Collision4P(Position, Data[i].Xz))
 			{
-				uint8_t Cut = Data[i].Tcut;
+				size_t Cut = static_cast<size_t>(Data[i].Tcut);
 
 				Camera->SetImage(Cut);
+
+				if (Cut >= Room->Rid->Count()) { Cut = 0; }
 
 				Camera->Set(Room->Rid->Get(Cut)->ViewR >> 7, Room->Rid->Get(Cut)->View_p, Room->Rid->Get(Cut)->View_r);
 

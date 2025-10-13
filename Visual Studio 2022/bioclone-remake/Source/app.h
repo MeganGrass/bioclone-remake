@@ -15,6 +15,7 @@
 #include <bio_geometry.h>
 #include <bio_camera.h>
 #include <bio_room.h>
+#include <bio_message.h>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -114,7 +115,7 @@ struct Scenario
 	std::shared_ptr<Resident_Evil_Model> pC_em{ nullptr };
 	POLY_GT4* pMizu_div{ 0 };
 	uint8_t Type{ 0 };
-	uint8_t Cut_old{ 0 };
+	uintmax_t Cut_old{ 0 };		// uint8_t Cut_old{ 0 };
 	uint8_t C_id{ 0 };
 	uint8_t C_model_type{ 0 };
 	uint8_t C_kind{ 0 };
@@ -125,70 +126,10 @@ struct Scenario
 	uint8_t Se_tmp1{ 0 };
 	uint8_t Se_vol{ 0 };
 
-	struct MONITOR
-	{
-		uintptr_t Gp;
-		struct TASK
-		{
-			uint16_t Tcb_status;
-			int16_t Tcb_sleep_ctr;
-			intptr_t* pTcb_pc;
-			uintptr_t Tcb_th;
-			struct TCB2
-			{
-				LONG Status;
-				LONG Mode;
-				LONG Zero;
-				LONG At;
-				LONG V0;
-				LONG V1;
-				LONG A0;
-				LONG A1;
-				LONG A2;
-				LONG A3;
-				LONG T0;
-				LONG T1;
-				LONG T2;
-				LONG T3;
-				LONG T4;
-				LONG T5;
-				LONG T6;
-				LONG T7;
-				LONG S0;
-				LONG S1;
-				LONG S2;
-				LONG S3;
-				LONG S4;
-				LONG S5;
-				LONG S6;
-				LONG S7;
-				LONG T8;
-				LONG T9;
-				LONG K0;
-				LONG K1;
-				LONG GP;
-				LONG SP;
-				LONG FP;
-				LONG RA;
-				LONG EPC;
-				LONG MDHI;
-				LONG MDLO;
-				LONG SR;
-				LONG CAUSE;
-				LONG Dummy0;
-				LONG Dummy1;
-				LONG Dummy2;
-				LONG System[6];
-			} pTcb;
-			uintptr_t Tcb_init_sp;
-			//EXEC Tcb_exec;
-			uintptr_t* pPc;
-			uint16_t R_no[6];
-			int16_t Ctr[8];
-			uint8_t Free[16];
-		} Task[3];
-		TASK* pCtcb;
-	} Monitor{};
+	AOT* pCAot{ nullptr };
+
+	int16_t Old_Fatari{};
+	int16_t Old_Uatari{};
 
 	struct SAVE_DATA
 	{
@@ -295,19 +236,33 @@ struct Scenario
 	uint32_t Room_player_flg{};
 	uint32_t Rbj_set_flg{};
 	uint32_t nSce_aot{};
+	uint16_t Get_item_id{};
 	uint8_t Next_cut_no{};
 	uint8_t Mirror_flg{};
 	uint16_t Mirror_pos{};
 	uint16_t Mirror_max{};
 	uint16_t Mirror_min{};
 
+	uint32_t Stop_bak{};
+
 	std::shared_ptr<Resident_Evil_Model> pEm;
 
 	Resident_Evil_2_RVD_Data* Cccut{ nullptr };
 	Resident_Evil_2_RVD_Data* Cccut_next{ nullptr };
 
-	// Is the player currently in an AOT hotspot?
-	const bool ProcessAOT(void);
+	// TEMP
+	void NullScheduler(void);
+
+	// Initialize Scheduler
+	void SceSchedulerSet(void);
+
+	// Run Scheduler
+	void SceScheduler(void);
+
+	// Process AOT (doors, items, triggers, etc)
+	void ProcessAOT(void);
+
+	// Last activated AOT trigger
 	std::string AotStr = "";
 
 };
@@ -404,6 +359,8 @@ private:
 	void Screenshot(void);
 
 	void CollisionEditor(void);
+	void ScenarioEditor(void);
+	void SceModelEditor(void);
 	void ModelEditor(const bool b_RoomModel);
 	void EffectEditor(void);
 
@@ -414,6 +371,7 @@ private:
 	void InitPlayerState(std::shared_ptr<Resident_Evil_Model> Model, std::unique_ptr<StateMachineType>& State);
 	void ControllerInput(std::unique_ptr<StateMachineType>& State);
 
+	void DrawMessage(void);
 	void DrawBackground(void);
 	void DrawCamera(void);
 	void DrawSprite(void);
@@ -424,7 +382,7 @@ private:
 	void DrawScenario(void);
 	void DrawEffect(std::size_t iElement, VECTOR2 Position, const float Scale = 1.0f / (ONE / 32));
 	void Collision(ModelType ModelType, VECTOR2& Position, SIZEVECTOR Hitbox);
-	void CameraSwitch(VECTOR2& Position, SIZEVECTOR Hitbox);
+	void CameraSwitch(VECTOR2 Position);
 
 	void MainMenu(void);
 	void Options(void);
@@ -464,8 +422,6 @@ public:
 
 	std::unique_ptr<Scenario> Sce;
 
-	std::unique_ptr<StateMachineType> m_PlayerState;
-
 	std::shared_ptr<Resident_Evil_Model> Player;
 	std::shared_ptr<Resident_Evil_Model> SubPlayer;
 	std::vector<std::shared_ptr<Resident_Evil_Model>> Enemy;
@@ -473,13 +429,18 @@ public:
 
 	std::unique_ptr<Resident_Evil_Geometry> Geometry;
 
+	std::unique_ptr<Resident_Evil_Message> Message;
+
 	std::unique_ptr<Resident_Evil_Camera> Camera;
 
 	std::shared_ptr<Resident_Evil_Room> Room;
 
+	std::filesystem::path m_DataPath;
 	std::filesystem::path m_PlayerPath;
 	std::filesystem::path m_EnemyPath;
 	std::filesystem::path m_DoorPath;
+
+	std::atomic<bool> b_Pause;
 
 	bool b_Active;
 
@@ -548,11 +509,13 @@ public:
 		b_FileOp.store(false);
 		b_ScriptOp.store(true);
 		b_DrawAot.store(true);
+		b_Pause.store(false);
 		MainOp.InitPool(1);
 		FileOp.InitPool(1);
 		ScriptOp.InitPool(1);
 		Camera = std::make_unique<Resident_Evil_Camera>(Render, GTE);
 		Geometry = std::make_unique<Resident_Evil_Geometry>(Render, GTE);
+		Message = std::make_unique<Resident_Evil_Message>(Render);
 		Modal = [&]() {};
 	}
 	~Global_Application(void) = default;

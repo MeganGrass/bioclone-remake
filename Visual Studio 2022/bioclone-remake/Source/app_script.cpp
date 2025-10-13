@@ -19,6 +19,11 @@ extern ScenarioFunction Sce_at_jump_tbl[];
 
 namespace Resident_Evil_2_Instruction
 {
+	struct StdExCall : public Standard_Exception
+	{
+		using Standard_Exception::Exception;
+	};
+
 	enum : uint32_t
 	{
 		STATUS_READY = 0,
@@ -29,11 +34,6 @@ namespace Resident_Evil_2_Instruction
 	{
 		EXEC_NORMAL = 1,
 		EXEC_YIELD = 2
-	};
-
-	struct StdExCall : public Standard_Exception
-	{
-		using Standard_Exception::Exception;
 	};
 
 
@@ -139,15 +139,16 @@ namespace Resident_Evil_2_Instruction
 		G->Sce->Cccut_next = Ccut_search(Fc);
 	}
 
-	static void Cut_chg_main(uint32_t Cut_no)
+	static void Cut_chg_main(uintmax_t Cut_no)
 	{
 		//Main.Bg_chg_flg = 1;
 
-		G->Sce->Cut_old = static_cast<uint8_t>(G->Sce->SaveData.Cut_no);
+		// G->Sce->Cut_old = G.SaveData.Cut_no;
+		G->Sce->Cut_old = G->Camera->m_Cut;
 
 		G->Sce->SaveData.Cut_no = static_cast<int16_t>(Cut_no);
 
-		Cut_change(Cut_no);
+		Cut_change(static_cast<uint32_t>(Cut_no));
 
 		if (Cut_no != G->Camera->m_Cut && Cut_no < G->Camera->m_CutMax)
 		{
@@ -161,6 +162,32 @@ namespace Resident_Evil_2_Instruction
 
 			G->Sce->System_flg &= 0xdfffffff;
 		}
+	}
+
+
+	static void Rot_vector(int16_t dir, SVECTOR* p, SVECTOR* q)
+	{
+		// Svec and Tmp_matrix should be global, probably used by enemy overlays
+
+		SVECTOR Svec{};
+		MATRIX Tmp_matrix{};
+
+		Svec.vy = dir;
+
+		G->GTE->RotMatrix((SVECTOR*)&Svec, (MATRIX*)&Tmp_matrix);
+		G->GTE->ApplyMatrixSV((MATRIX*)&Tmp_matrix, (SVECTOR*)p, (SVECTOR*)q);
+	}
+
+	static void Rot_vector_super(int16_t dir, MATRIX* pM, SVECTOR* p, SVECTOR* q)
+	{
+		// Svec and Tmp_matrix should be global, probably used by enemy overlays
+
+		SVECTOR Svec{};
+		MATRIX Tmp_matrix{};
+
+		G->GTE->RotMatrix((SVECTOR*)&Svec, (MATRIX*)&Tmp_matrix);
+		G->GTE->MulMatrix2((MATRIX*)pM, (MATRIX*)&Tmp_matrix);
+		G->GTE->ApplyMatrixSV((MATRIX*)&Tmp_matrix, (SVECTOR*)p, (SVECTOR*)q);
 	}
 
 
@@ -219,11 +246,78 @@ namespace Resident_Evil_2_Instruction
 		return Dir;
 	}
 
+	static void Goto00(std::shared_ptr<Resident_Evil_Model>& pEm, int32_t Vec_x, int32_t Vec_z, int16_t Add_dir)
+	{
+		uint32_t Step = static_cast<uint16_t>(Add_dir);
+
+		uint32_t Direction = static_cast<uint16_t>(Direction_ck(static_cast<int16_t>(pEm->Position().x), static_cast<int16_t>(pEm->Position().z), static_cast<int16_t>(Vec_x), static_cast<int16_t>(Vec_z)));
+
+		if (static_cast<int16_t>(Add_dir) < 0)
+		{
+			Step = static_cast<uint32_t>(-static_cast<int16_t>(Add_dir));
+
+			Direction = (Direction + 2048) & 4095;
+		}
+
+		const uint32_t Current = static_cast<uint16_t>(pEm->Rotation().y);
+
+		const uint32_t Angle = (Step + ((Direction - Current) & 4095)) & 4095;
+
+		if (Angle < (Step * 2))
+		{
+			pEm->Rotation().y = static_cast<int16_t>(Direction);
+		}
+		else
+		{
+			int16_t sVar1 = static_cast<int16_t>(Current) - static_cast<int16_t>(Step);
+
+			pEm->Rotation().y = sVar1;
+
+			if (Angle < 2049)
+			{
+				pEm->Rotation().y = static_cast<int16_t>(static_cast<int32_t>(sVar1) + static_cast<int32_t>(Step) * 2);
+			}
+		}
+	}
+
+	static void Goto01(std::shared_ptr<Resident_Evil_Model>& pEm, int16_t Dir, int16_t Add_dir)
+	{
+		uint32_t Step = static_cast<uint16_t>(Add_dir);
+
+		uint32_t Direction = static_cast<uint16_t>(Dir);
+
+		if (static_cast<int16_t>(Add_dir) < 0)
+		{
+			Step = static_cast<uint32_t>(-static_cast<int16_t>(Add_dir));
+			Direction = (Direction + 2048) & 4095;
+		}
+
+		const uint32_t Current = static_cast<uint16_t>(pEm->Rotation().y);
+
+		const uint32_t Angle = (Step + ((Direction - Current) & 4095)) & 4095;
+
+		if (Angle < (Step * 2))
+		{
+			pEm->Rotation().y = static_cast<int16_t>(Direction);
+		}
+		else
+		{
+			int16_t sVar1 = static_cast<int16_t>(Current) - static_cast<int16_t>(Step);
+
+			pEm->Rotation().y = sVar1;
+
+			if (Angle < 2049)
+			{
+				pEm->Rotation().y = static_cast<int16_t>(static_cast<int32_t>(sVar1) + static_cast<int32_t>(Step) * 2);
+			}
+		}
+	}
+
 	static int32_t Goto00_ck(std::shared_ptr<Resident_Evil_Model>& pEm, int32_t Vec_x, int32_t Vec_z, int16_t Add_dir)
 	{
 		const uint16_t Dir = Direction_ck(static_cast<int16_t>(pEm->Position().x), static_cast<int16_t>(pEm->Position().z), static_cast<int16_t>(Vec_x), static_cast<int16_t>(Vec_z));
 
-		const uint32_t Angle = (static_cast<uint32_t>(static_cast<uint16_t>(Add_dir)) + (static_cast<uint32_t>(Dir) - static_cast<uint32_t>(static_cast<uint16_t>(pEm->Rotation().y)))) & 4095;
+		const uint32_t Angle = (static_cast<uint32_t>(static_cast<uint16_t>(Add_dir)) + (static_cast<uint32_t>(Dir) - static_cast<uint32_t>(static_cast<uint16_t>(pEm->Rotation().y)))) & 4095u;
 
 		const int32_t Step = static_cast<int32_t>(Add_dir);
 
@@ -233,7 +327,7 @@ namespace Resident_Evil_2_Instruction
 		{
 			Result = Step;
 
-			if (Angle > 2048)
+			if (2048u < Angle)
 			{
 				Result = -Step;
 			}
@@ -266,24 +360,24 @@ namespace Resident_Evil_2_Instruction
 
 	static uint8_t Cdir_ck2(std::shared_ptr<Resident_Evil_Model>& pEm, std::shared_ptr<Resident_Evil_Model>& pT)
 	{
-		int16_t Cdir = Direction_ck(static_cast<int16_t>(pEm->Position().x), static_cast<int16_t>(pEm->Position().z), static_cast<int16_t>(pT->Position().x), static_cast<int16_t>(pT->Position().z));
+		int16_t Dir = Direction_ck(static_cast<int16_t>(pEm->Position().x), static_cast<int16_t>(pEm->Position().z), static_cast<int16_t>(pT->Position().x), static_cast<int16_t>(pT->Position().z));
 
-		return ((pT->Rotation().y - static_cast<int32_t>(Cdir)) + 1024u & 4095) < 2048;
+		return ((pT->Rotation().y - static_cast<int32_t>(Dir)) + 1024u & 4095) < 2048;
 	}
 
 	static int32_t Dir_pos_ck(VECTOR* pV, VECTOR* pP, int16_t Hed_dir, int16_t Hani_dir)
 	{
 		int16_t Dir = Direction_ck(static_cast<int16_t>(pV->vx), static_cast<int16_t>(pV->vz), static_cast<int16_t>(pP->vx), static_cast<int16_t>(pP->vz));
 
-		uint32_t lhs = static_cast<uint32_t>((static_cast<int32_t>(Dir) - static_cast<int32_t>(Hed_dir)) + static_cast<int32_t>(Hani_dir));
+		uint32_t Left = static_cast<uint32_t>((static_cast<int32_t>(Dir) - static_cast<int32_t>(Hed_dir)) + static_cast<int32_t>(Hani_dir));
 
-		lhs &= 4095u;
+		Left &= 4095u;
 
-		uint32_t rhs = static_cast<uint32_t>(static_cast<int32_t>(Hani_dir) << 1);
+		uint32_t Right = static_cast<uint32_t>(static_cast<int32_t>(Hani_dir) << 1);
 
-		uint32_t cmp = (lhs < rhs) ? 1u : 0u;
+		uint32_t Compare = (Left < Right) ? 1u : 0u;
 
-		return static_cast<int32_t>(cmp ^ 1u);
+		return static_cast<int32_t>(Compare ^ 1u);
 	}
 
 
@@ -325,7 +419,61 @@ namespace Resident_Evil_2_Instruction
 
 	static int32_t Mess_set(uint32_t Pos_xy, uint16_t Attr, uint32_t Mess_no, uint32_t Stop_data)
 	{
-		// TODO
+		if (!G->Message->IsStatic() || !G->Message->IsDynamic()) { return 0; }
+
+		G->b_Pause.store(true);
+
+		G->Message->ResetPrintCount();
+
+		G->Sce->Status_flg |= STAT_AUTO_MOVE;
+
+		auto PrintMessage = [&]()
+			{
+				if ((G->Sce->System_flg & (SYS_LANG_MAIN | SYS_LANG_SUB)) == SYS_LANG_SUB)
+				{
+					if (Mess_no < G->Room->MessageSub.size())
+					{
+						G->Message->Print(34, 185, Attr | 0x4000, G->Room->MessageSub[Mess_no], G->Message->PrintCount());
+					}
+				}
+				else
+				{
+					if (Mess_no < G->Room->MessageSub.size())
+					{
+						G->Message->Print(34, 185, Attr | 0x4000, G->Room->Message[Mess_no], G->Message->PrintCount());
+					}
+				}
+			};
+
+		PrintMessage();
+
+		while (G->b_Pause.load())
+		{
+			if ((static_cast<uint32_t>(G->Player->State()->KeyStateTrigger()) & static_cast<uint32_t>(Resident_Evil_Key::INSPECT)) != 0)
+			{
+				if (G->Message->IsComplete())
+				{
+					G->b_Pause.store(false);
+
+					G->Message->ResetCanvas();
+
+					G->Sce->Stop_flg = G->Sce->Stop_bak;
+
+					G->Sce->Status_flg &= ~STAT_AUTO_MOVE;
+
+					break;
+				}
+				else
+				{
+					G->Message->ResetCanvas();
+
+					PrintMessage();
+				}
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+
 		return 0;
 	}
 
@@ -473,8 +621,6 @@ namespace Resident_Evil_2_Instruction
 
 		ClearWork(G->Enemy);
 
-		G->Enemy.push_back(std::make_shared<Resident_Evil_Model>());
-
 		for (auto i = 0; i < 10; i++)
 		{
 			G->Sce->Sce_task[i].Routine0 = 0;
@@ -516,7 +662,7 @@ namespace Resident_Evil_2_Instruction
 
 		G->Sce->Status_flg = G->Sce->Status_flg & 0xfffff3ff;
 
-		G->Sce->pC_em = G->Enemy[0];
+		G->Sce->pC_em = nullptr;
 
 		for (auto& Pri_be_flg : G->Sce->SaveData.Pri_be_flg)
 		{
@@ -550,7 +696,15 @@ namespace Resident_Evil_2_Instruction
 			while (true)
 			{
 				do {
+#if 0
+					auto it = iBytecode.find(static_cast<std::int8_t>(Task.Data[0]));
+					if (it != iBytecode.end())
+					{
+						std::cout << Standard_String().FormatCStyle("Opcode: 0x%02X\tName: %s", static_cast<int>(Task.Data[0]), it->second.Name.c_str()) << std::endl;
+					}
+#endif
 					Result = Sce_jmp_tbl[*Task.Data].func(&Task);
+
 				} while (Result == EXEC_NORMAL);
 
 				if (Result == EXEC_YIELD || Task.Sub_ctr < 0)
@@ -660,17 +814,22 @@ namespace Resident_Evil_2_Instruction
 
 	static uint32_t Nothing(Scenario::AOT& pAot)
 	{
-		//G->Sce->SaveData.F_atari = static_cast<int16_t>(Old_Fatari);
-		//G->Sce->SaveData.U_atari = static_cast<int16_t>(Old_Uatari);
+		G->Sce->SaveData.F_atari = static_cast<int16_t>(G->Sce->Old_Fatari);
+		G->Sce->SaveData.U_atari = static_cast<int16_t>(G->Sce->Old_Uatari);
 		return 0;
 	}
 
 	static uint32_t Sce_Door(Scenario::AOT& pAot)
 	{
-		G->Player->Position().x = pAot.Next_pos_x;
-		G->Player->Position().y = pAot.Next_pos_y;
-		G->Player->Position().z = pAot.Next_pos_z;
-		G->Player->Rotation().y = pAot.Next_cdir_y;
+		G->Player->Position() = { pAot.Next_pos_x, pAot.Next_pos_y, pAot.Next_pos_z };
+		G->Player->Rotation() = { 0, pAot.Next_cdir_y, 0 };
+
+		G->Player->ClampPosition(G->Player->Position());
+		G->Player->ClampRotation(G->Player->Rotation());
+
+#if 0
+		std::wcout << L"Sce_Door: " << Standard_String().FormatCStyle(L"%ws\\room%x%02x%d.rdt", G->Room->m_Path.wstring().c_str(), pAot.Next_stage + 1, pAot.Next_room, G->Player->m_PlayerID) << std::endl;
+#endif
 
 		G->OpenRDT(Standard_String().FormatCStyle(L"%ws\\room%x%02x%d.rdt", G->Room->m_Path.wstring().c_str(), pAot.Next_stage + 1, pAot.Next_room, G->Player->m_PlayerID), pAot.Next_cut);
 
@@ -679,8 +838,29 @@ namespace Resident_Evil_2_Instruction
 
 	static uint32_t Sce_Item(Scenario::AOT& pAot)
 	{
-		// TODO
-		return 0;
+		G->Sce->Get_item_id = pAot.iItem;
+
+		if (((G->Sce->System_flg & SYS_LANG_SUB) != 0) && (G->Sce->Get_item_id == 30))
+		{
+			pAot.nItem = static_cast<uint16_t>(2);	// modify ink ribbon count?
+		}
+
+		bool Result = ((pAot.Action & 1) != 0);
+
+		if (Result)
+		{
+			G->Player->State()->Set(Inspect_Kneel);
+		}
+		else
+		{
+			G->Sce->Status_flg |= STAT_STATUS_SCREEN;
+		}
+
+		// St_type = 2;
+
+		// TODO: implement status screen
+
+		return static_cast<uint32_t>(Result);
 	}
 
 	static uint32_t Sce_Normal(Scenario::AOT& pAot)
@@ -739,7 +919,7 @@ namespace Resident_Evil_2_Instruction
 			return 0;
 		}
 
-		//G->Sce->pEm->Water = pAot.Data0;
+		G->Sce->pEm->Water = static_cast<int16_t>(pAot.Data0);
 
 		return 0;
 	}
@@ -764,6 +944,41 @@ namespace Resident_Evil_2_Instruction
 	static uint32_t Sce_Save(Scenario::AOT& pAot)
 	{
 		// TODO
+
+		/*auto Save_entrance = []()
+			{
+				if (G.Back_func_rtn == 0)
+				{
+					if (Search_item_id(30) < 0)
+					{
+						G->Sce->Stop_flg = G->Game->Stop_bak;
+
+						Mess_set(0, 0x100, 0, 0xff000000);	// "...if I had an ink ribbon..."
+					}
+					else
+					{
+						Mess_set(0, 0x100, 1, 0xff000000);	// "...use the ink ribbon?"
+					}
+				}
+				else if ((G.Back_func_rtn == 1) && ((G->Sce->Mess_flg & 0x80) == 0))
+				{
+					if ((G->Sce->Mess_flg & 1) == 0)
+					{
+						G->Sce->System_flg |= SYS_SAVE_GAME;
+					}
+					else
+					{
+						G->Sce->Stop_flg = G->Game->Stop_bak;
+					}
+				}
+			};*/
+
+		//G->Game->Stop_bak = G->Sce->Stop_flg;
+
+		G->Sce->Stop_flg |= 0xff000000;
+
+		G->Sce->SaveData.Save_area = static_cast<uint8_t>(pAot.Data0 & 0xFF);
+
 		return 0;
 	}
 
@@ -776,12 +991,76 @@ namespace Resident_Evil_2_Instruction
 	static uint32_t Sce_Damage(Scenario::AOT& pAot)
 	{
 		// TODO
-		return 0;
+
+		auto& Model = G->Sce->pEm;
+
+		//if ((Model->Damage_cnt & 0x80) == 0)
+		if (!Model->State()->b_Damage)
+		{
+			//if ((Model->Status_flg & 2) == 0)
+			{
+			//	Model->Damage_cnt |= 0x80;
+
+				Model->iHealth -= static_cast<int32_t>(pAot.Data1);
+
+				if (Model->iHealth < 0)
+				{
+					if (Model->Routine_0 != 3)
+					{
+						Model->Routine_0 = 3;
+						Model->Routine_1 = 0;
+						Model->Routine_2 = 0;
+						Model->Routine_3 = 0;
+
+						Model->State()->Set(Death);
+					}
+				}
+				else
+				{
+					Model->Routine_0 = 2;
+					Model->Routine_1 = pAot.Data0 && 0xFF;
+					Model->Routine_2 = 0;
+					Model->Routine_3 = 0;
+
+					Model->State()->Set(Damage_Front_Minor);
+
+					int16_t Hontai_x = static_cast<int16_t>(G->Sce->pCAot->X + (G->Sce->pCAot->W >> 1));
+					int16_t Hontai_z = static_cast<int16_t>(G->Sce->pCAot->Z + (G->Sce->pCAot->D >> 1));
+
+					int16_t Dir = Direction_ck(Hontai_x, Hontai_z, static_cast<int16_t>(Model->Position().x), static_cast<int16_t>(Model->Position().z));
+
+					//Model->Speed() = { 200, 0, 0 };
+					Model->Speed().x = 200;
+
+					int32_t muki = static_cast<int32_t>(Dir - static_cast<int16_t>(Model->Rotation().y));
+
+					Model->AddSpeedXZ_orig(muki);
+
+					//FUN_8003947c(4, 0);			// controller vibration
+					//FUN_80039514(10, 0x96, 0);	// controller vibration
+				}
+			}
+			//else
+			{
+			//	Model->Status_flg &= 0xfffd;
+			}
+		}
+
+		return 1;
 	}
 
 	static uint32_t Sce_Status(Scenario::AOT& pAot)
 	{
 		// TODO
+
+		//G->Sce->Game->Doordemo_flg = 1;
+
+		//G->Sce->St->St_type = 0;
+
+		//G->Sce->Game->Stop_bak = G->Sce->Stop_flg;
+
+		G->Sce->Status_flg |= STAT_STATUS_SCREEN;
+
 		return 0;
 	}
 
@@ -794,53 +1073,257 @@ namespace Resident_Evil_2_Instruction
 	static uint32_t Sce_Windows(Scenario::AOT& pAot)
 	{
 		// TODO
+
+		//G->Sce->Game->Doordemo_flg = 7;
+
+		//G->Sce->Window_no = (static_cast<uint32_t>(static_cast<uint8_t>(pAot.Data1 & 0xFF)) << 4) + static_cast<uint32_t>(static_cast<uint8_t>(pAot.Data0 & 0xFF));
+
 		return 0;
 	}
 
 	static uint32_t Sce_at_check(std::shared_ptr<Resident_Evil_Model> pEm, uint32_t attribute, uint32_t auto_flg)
 	{
-		// TODO
+		if (!pEm) { return 0; }
+
+		static constexpr std::array<const char*, 15> SceFuncStr =
+		{
+			"Nothing",
+			"Door",
+			"Item",
+			"Normal",
+			"Message",
+			"Event",
+			"Flag Change",
+			"Water",
+			"Move",
+			"Save",
+			"Item Box",
+			"Damage",
+			"Status",
+			"Drawer",
+			"Computer"
+		};
+
+		bool Hit_flg = false;
+
+		SVECTOR Forward{ 620, 0, 0 };
+		VECTOR2 Probe{};
+
+		int16_t F_Atari = 0;
+		int16_t U_Atari = 0;
+
+		Rot_vector(static_cast<int16_t>(pEm->Rotation().y), &Forward, &Forward);
+
+		Probe.x = static_cast<int32_t>(Forward.vx) + pEm->Position().x;
+		Probe.z = static_cast<int32_t>(Forward.vz) + pEm->Position().z;
+
+		G->Sce->pEm = pEm;
+
+		for (size_t i = 0; i < G->Sce->Sce_aot.size(); i++)
+		{
+			auto& Aot = G->Sce->Sce_aot[i];
+
+			G->Sce->pCAot = &Aot;
+
+			if (Aot.Id == SCE_NOTHING) { continue; }
+
+			G->Sce->Old_Fatari = G->Sce->SaveData.F_atari;
+			G->Sce->Old_Uatari = G->Sce->SaveData.U_atari;
+
+			if ((Aot.Type & attribute) == 0) { continue; }
+
+			if (((Aot.Type & SCE_MANUAL) != auto_flg) || !((Aot.nFloor & 0x80) != 0 || pEm->nFloor() == Aot.nFloor)) { continue; }
+
+			/*if ((Aot.Super & 0x80) == 0)
+			{
+				Aot.Data0 = 0;
+				Aot.Data1 = 0;
+			}
+			else if ((Aot.Super & 0x40) == 0)
+			{
+				Aot.Data0 = static_cast<int16_t>(G->Room->Object[Aot.Super & 0x3F]->Position().x);
+				Aot.Data1 = static_cast<int16_t>(G->Room->Object[Aot.Super & 0x3F]->Position().z);
+			}
+			else
+			{
+				Aot.Data0 = static_cast<int16_t>(G->Enemy[Aot.Super & 0x3F]->Position().x);
+				Aot.Data1 = static_cast<int16_t>(G->Enemy[Aot.Super & 0x3F]->Position().z);
+			}
+
+			Aot.Data2 = Aot.Data0 + ((Aot.Type & SCE_POINT4) == 0 ? Aot.X : Aot.Xz[0][0]);*/
+
+			Hit_flg = false;
+
+			F_Atari = G->Sce->SaveData.F_atari;
+			U_Atari = G->Sce->SaveData.U_atari;
+
+			const bool b_Front = (Aot.Type & SCE_FRONT) != 0;
+			const bool b_Under = (Aot.Type & SCE_UNDER) != 0;
+			const bool b_Point4 = (Aot.Type & SCE_POINT4) != 0;
+
+			if (b_Under)
+			{
+				if (b_Point4)
+				{
+					Hit_flg = G->Geometry->Collision4P(pEm->Position(), Aot.Xz);
+				}
+				else
+				{
+					Hit_flg = G->Geometry->CollisionBox(pEm->Position(), Aot.X, Aot.Z, Aot.W, Aot.D);
+				}
+
+				if (Hit_flg)
+				{
+					F_Atari = G->Sce->SaveData.F_atari;
+					U_Atari = static_cast<int16_t>(i);
+				}
+				else if (b_Front)
+				{
+					if (b_Point4)
+					{
+						Hit_flg = G->Geometry->Collision4P(Probe, Aot.Xz);
+					}
+					else
+					{
+						Hit_flg = G->Geometry->CollisionBox(Probe, Aot.X, Aot.Z, Aot.W, Aot.D);
+					}
+
+					if (Hit_flg)
+					{
+						F_Atari = static_cast<int16_t>(i);
+						U_Atari = G->Sce->SaveData.U_atari;
+					}
+				}
+			}
+			else if (b_Front)
+			{
+				if (b_Point4)
+				{
+					Hit_flg = G->Geometry->Collision4P(Probe, Aot.Xz);
+				}
+				else
+				{
+					Hit_flg = G->Geometry->CollisionBox(Probe, Aot.X, Aot.Z, Aot.W, Aot.D);
+				}
+
+				if (Hit_flg)
+				{
+					F_Atari = static_cast<int16_t>(i);
+					U_Atari = G->Sce->SaveData.U_atari;
+				}
+			}
+
+			if (!Hit_flg) { continue; }
+
+			G->Sce->AotStr = SceFuncStr[Aot.Id];
+
+			G->Sce->SaveData.F_atari = F_Atari;
+			G->Sce->SaveData.U_atari = U_Atari;
+
+			pEm->At_sce_no = static_cast<uint8_t>(i);
+
+			if (auto_flg == 0)
+			{
+				Sce_at_jump_tbl[Aot.Id].func(Aot);
+				continue;
+			}
+
+			return Sce_at_jump_tbl[Aot.Id].func(Aot);
+		}
+
 		return 0;
 	}
 
 	static void Sce_at(void)
 	{
-		// TODO
+		if (!G->Player->State()) { return; }
+
+		if ((static_cast<uint32_t>(G->Player->State()->KeyStateTrigger()) & static_cast<uint32_t>(Resident_Evil_Key::INSPECT)) != 0)
+		{
+			G->Sce->Status_flg |= STAT_INSPECT;
+		}
+		else
+		{
+			G->Sce->Status_flg &= ~STAT_INSPECT;
+		}
+
+		if (-1 > G->Player->iHealth) { return; }
+
+		G->Player->Water = 0;
+
+		if ((G->Sce->Status_flg & STAT_INSPECT) != 0)
+		{
+			Sce_at_check(G->Player, 1, SCE_MANUAL);
+		}
+
+		Sce_at_check(G->Player, 1, SCE_AUTOMATIC);
+
+		for (size_t i = 0; i < G->Enemy.size(); i++)
+		{
+			auto& Enemy = G->Enemy[i];
+
+			//if ((Enemy->Be_flg & 1) != 0)
+			if (Enemy->b_Active)
+			{
+				Enemy->Water = 0;
+
+				Sce_at_check(Enemy, 2, SCE_AUTOMATIC);
+			}
+		}
+
+		for (size_t i = 0; i < G->Room->Object.size(); i++)
+		{
+			auto& Object = G->Room->Object[i];
+
+			//if ((Object->Be_flg & 1) != 0)
+			if (Object->b_Active)
+			{
+				Object->Water = 0;
+
+				Sce_at_check(Object, 8, SCE_AUTOMATIC);
+			}
+		}
+
+		//if ((G->SubPlayer->Be_flg & 1) != 0)
+		if (G->SubPlayer->b_Active)
+		{
+			G->SubPlayer->Water = 0;
+
+			Sce_at_check(G->SubPlayer, 8, SCE_AUTOMATIC);
+		}
 	}
 
 
 	static uint32_t While_main(Scenario::Task* pSce, uint8_t* pData, uint8_t Ofs)
 	{
-		short sVar1;
-		short* psVar2;
-		uint32_t uVar3;
-		uint32_t OpResult;
+		int16_t Value = 0;
+		uint32_t OpResult = 0;
 
-		uVar3 = Sce_jmp_tbl[*pData].func(pSce);
+		uint32_t Result = Sce_jmp_tbl[*pData].func(pSce);
 
-		psVar2 = (short*)pSce->Data;
+		int16_t* pCk_end = reinterpret_cast<int16_t*>(pSce->Data);
 
-		while (psVar2 != (short*)(pData + Ofs))
+		while (pCk_end != reinterpret_cast<int16_t*>(pData + Ofs))
 		{
-			sVar1 = *psVar2;
+			Value = *pCk_end;
 
-			pSce->Data = (uint8_t*)(psVar2 + 1);
+			pSce->Data = reinterpret_cast<uint8_t*>(pCk_end + 1);
 
-			OpResult = Sce_jmp_tbl[*(uint8_t*)(psVar2 + 1)].func(pSce);
+			OpResult = Sce_jmp_tbl[*(reinterpret_cast<uint8_t*>(pCk_end + 1))].func(pSce);
 
-			psVar2 = (short*)pSce->Data;
+			pCk_end = reinterpret_cast<int16_t*>(pSce->Data);
 
-			if (sVar1 == 0)
+			if (Value == 0)
 			{
-				uVar3 &= OpResult;
+				Result &= OpResult;
 			}
 			else
 			{
-				uVar3 |= OpResult;
+				Result |= OpResult;
 			}
 		}
 
-		return uVar3;
+		return Result;
 	}
 
 	static void Calc_branch(int32_t Operator, int16_t* Value, int32_t Num)
@@ -930,9 +1413,14 @@ namespace Resident_Evil_2_Instruction
 
 		switch (Member)
 		{
-		case MEMBER_ID: Work->SetFileID(Value); break;
-
 		case MEMBER_BE_FLAG0: Work->b_Active.store(static_cast<bool>(Value)); break;
+
+		case MEMBER_ROUTINE0: Work->Routine_0 = static_cast<uint8_t>(Value); break;
+		case MEMBER_ROUTINE1: Work->Routine_1 = static_cast<uint8_t>(Value); break;
+		case MEMBER_ROUTINE2: Work->Routine_2 = static_cast<uint8_t>(Value); break;
+		case MEMBER_ROUTINE3: Work->Routine_3 = static_cast<uint8_t>(Value); break;
+		case MEMBER_ID: Work->SetFileID(Value); break;
+		case MEMBER_TYPE: Work->SetWeaponFileID(Value); break;
 
 		case MEMBER_POS_X: Work->Position().x = Value; break;
 		case MEMBER_POS_Y: Work->Position().y = Value; break;
@@ -942,6 +1430,8 @@ namespace Resident_Evil_2_Instruction
 		case MEMBER_CDIR_Z: Work->Rotation().z = Value; break;
 		case MEMBER_NFLOOR: Work->SetnFloor(Value); break;
 
+		case MEMBER_DEST_X: Work->Dest_x = static_cast<int16_t>(Value); break;
+		case MEMBER_DEST_Z: Work->Dest_z = static_cast<int16_t>(Value); break;
 		case MEMBER_SCE_FLAG: Work->Sce_flg = Value; break;
 		case MEMBER_SCE_FREE0: Work->Sce_free0 = Value; break;
 		case MEMBER_SCE_FREE1: Work->Sce_free1 = Value; break;
@@ -970,7 +1460,12 @@ namespace Resident_Evil_2_Instruction
 		{
 		case MEMBER_BE_FLAG0: return Work->b_Active.load() ? 1 : 0;
 
+		case MEMBER_ROUTINE0: return Work->Routine_0;
+		case MEMBER_ROUTINE1: return Work->Routine_1;
+		case MEMBER_ROUTINE2: return Work->Routine_2;
+		case MEMBER_ROUTINE3: return Work->Routine_3;
 		case MEMBER_ID: return Work->FileID();
+		case MEMBER_TYPE: return Work->WeaponFileID();
 
 		case MEMBER_POS_X: return Work->Position().x;
 		case MEMBER_POS_Y: return Work->Position().y;
@@ -980,6 +1475,8 @@ namespace Resident_Evil_2_Instruction
 		case MEMBER_CDIR_Z: return Work->Rotation().z;
 		case MEMBER_NFLOOR: return Work->nFloor();
 
+		case MEMBER_DEST_X: return Work->Dest_x;
+		case MEMBER_DEST_Z: return Work->Dest_z;
 		case MEMBER_SCE_FLAG: return Work->Sce_flg;
 		case MEMBER_SCE_FREE0: return Work->Sce_free0;
 		case MEMBER_SCE_FREE1: return Work->Sce_free1;
@@ -1013,7 +1510,12 @@ namespace Resident_Evil_2_Instruction
 		{
 		case MEMBER_BE_FLAG0: Value = Work->b_Active.load() ? 1 : 0; return reinterpret_cast<int16_t&>(Value);
 
+		case MEMBER_ROUTINE0: return reinterpret_cast<int16_t&>(Work->Routine_0);
+		case MEMBER_ROUTINE1: return reinterpret_cast<int16_t&>(Work->Routine_1);
+		case MEMBER_ROUTINE2: return reinterpret_cast<int16_t&>(Work->Routine_2);
+		case MEMBER_ROUTINE3: return reinterpret_cast<int16_t&>(Work->Routine_3);
 		case MEMBER_ID: Value = Work->FileID(); return reinterpret_cast<int16_t&>(Value);
+		case MEMBER_TYPE: Value = Work->WeaponFileID(); return reinterpret_cast<int16_t&>(Value);
 
 		case MEMBER_POS_X: return reinterpret_cast<int16_t&>(Work->Position().x);
 		case MEMBER_POS_Y: return reinterpret_cast<int16_t&>(Work->Position().y);
@@ -1023,6 +1525,8 @@ namespace Resident_Evil_2_Instruction
 		case MEMBER_CDIR_Z: return reinterpret_cast<int16_t&>(Work->Rotation().z);
 		case MEMBER_NFLOOR: Value = Work->nFloor(); return reinterpret_cast<int16_t&>(Value);
 
+		case MEMBER_DEST_X: return reinterpret_cast<int16_t&>(Work->Dest_x);
+		case MEMBER_DEST_Z: return reinterpret_cast<int16_t&>(Work->Dest_z);
 		case MEMBER_SCE_FLAG: return reinterpret_cast<int16_t&>(Work->Sce_flg);
 		case MEMBER_SCE_FREE0: return reinterpret_cast<int16_t&>(Work->Sce_free0);
 		case MEMBER_SCE_FREE1: return reinterpret_cast<int16_t&>(Work->Sce_free1);
@@ -1710,7 +2214,7 @@ namespace Resident_Evil_2_Instruction
 
 		Cut_chg_main(Op->Cut_no);
 
-		G->Sce->Status_flg |= 0x100000;
+		G->Sce->Status_flg |= SYS_PSP_TRANS;
 
 		//if ((Op->Cut_no & 0x80) != 0)
 		//{
@@ -1728,7 +2232,7 @@ namespace Resident_Evil_2_Instruction
 
 		Cut_chg_main(G->Sce->Cut_old);
 
-		G->Sce->Status_flg = G->Sce->Status_flg & 0xfffffeff | 0x100000;
+		G->Sce->Status_flg = G->Sce->Status_flg & 0xfffffeff | SYS_PSP_TRANS;
 
 		return EXEC_NORMAL;
 	}
@@ -1739,9 +2243,11 @@ namespace Resident_Evil_2_Instruction
 
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Message_on);
 
-		Mess_set(0, Op->Attr | 0x300, Op->Mess_no, Op->Stop_data << 16);
+		G->Sce->Stop_bak = G->Sce->Stop_flg;
 
-		G->Sce->Stop_flg = G->Sce->Stop_flg | Op->Stop_data << 0x10;
+		G->Sce->Stop_flg |= (Op->Stop_data << 16);
+
+		Mess_set(0, Op->Attr | 0x300, Op->Mess_no, Op->Stop_data << 16);
 
 		return EXEC_NORMAL;
 	}
@@ -1797,9 +2303,9 @@ namespace Resident_Evil_2_Instruction
 		Object->b_Active = Op->Be_flg & OM_ENABLED ? true : false;	// TODO - parse Be_flg flags
 		//Object->Attribute = Attribute;
 
-		Object->Position().x = Op->Pos_x;// +Ofs_x;
-		Object->Position().y = Op->Pos_y;// +Ofs_y;
-		Object->Position().z = Op->Pos_z;// +Ofs_z;
+		Object->Position().x = Op->Pos_x;// + Op->Ofs_x;
+		Object->Position().y = Op->Pos_y;// + Op->Ofs_y;
+		Object->Position().z = Op->Pos_z;// + Op->Ofs_z;
 
 		Object->Rotation().x = Op->Cdir_x;
 		Object->Rotation().y = Op->Cdir_y;
@@ -1827,9 +2333,42 @@ namespace Resident_Evil_2_Instruction
 		{
 		case WORK_TYPE_PLAYER: pSce->pWork = G->Player; break;
 		case WORK_TYPE_SUB_PLAYER: pSce->pWork = G->SubPlayer; break;
-		case WORK_TYPE_ENEMY: pSce->pWork = G->Enemy[Op->Work_no]; break;
-		case WORK_TYPE_OBJECT: pSce->pWork = G->Room->Object[Op->Work_no]; break;
-		case WORK_TYPE_DOOR: pSce->pWork = G->Door[Op->Work_no]; break;
+		case WORK_TYPE_ENEMY:
+		{
+			if (Op->Work_no >= G->Enemy.size())
+			{
+				std::cout << "WorkSet: Enemy " << (int)Op->Work_no << " is out of range" << std::endl;
+			}
+			else
+			{
+				pSce->pWork = G->Enemy[Op->Work_no];
+			}
+			break;
+		}
+		case WORK_TYPE_OBJECT:
+		{
+			if (Op->Work_no >= G->Room->Object.size())
+			{
+				std::cout << "WorkSet: Object " << (int)Op->Work_no << " is out of range" << std::endl;
+			}
+			else
+			{
+				pSce->pWork = G->Room->Object[Op->Work_no];
+			}
+			break;
+		}
+		case WORK_TYPE_DOOR:
+		{
+			if (Op->Work_no >= G->Door.size())
+			{
+				std::cout << "WorkSet: Door " << (int)Op->Work_no << " is out of range" << std::endl;
+			}
+			else
+			{
+				pSce->pWork = G->Door[Op->Work_no];
+			}
+			break;
+		}
 		}
 
 		return EXEC_NORMAL;
@@ -2111,24 +2650,35 @@ namespace Resident_Evil_2_Instruction
 
 		// TODO
 		uint32_t Routine = (static_cast<uint32_t>(Op->Routine_0) << 8) | 4u;
-		//pSce->pWork->Routine_0 = static_cast<uint8_t>(Routine & 0xFF);
-		//pSce->pWork->Routine_1 = static_cast<uint8_t>((Routine >> 8) & 0xFF);
-		//pSce->pWork->Routine_2 = static_cast<uint8_t>((Routine >> 16) & 0xFF);
-		//pSce->pWork->Routine_3 = static_cast<uint8_t>((Routine >> 24) & 0xFF);
-		auto Routine0 = static_cast<uint8_t>(Routine & 0xFF);
-		auto Routine1 = static_cast<uint8_t>((Routine >> 8) & 0xFF);
-		auto Routine2 = static_cast<uint8_t>((Routine >> 16) & 0xFF);
-		auto Routine3 = static_cast<uint8_t>((Routine >> 24) & 0xFF);
+		pSce->pWork->Routine_0 = static_cast<uint8_t>(Routine & 0xFF);
+		pSce->pWork->Routine_1 = static_cast<uint8_t>((Routine >> 8) & 0xFF);
+		pSce->pWork->Routine_2 = static_cast<uint8_t>((Routine >> 16) & 0xFF);
+		pSce->pWork->Routine_3 = static_cast<uint8_t>((Routine >> 24) & 0xFF);
 
-		std::cout << "PlcMotion: " << (int)Routine0 << "," << (int)Routine1 << "," << (int)Routine2 << "," << (int)Routine3;
-		std::cout << " Move_no:" << (int)Op->Move_no;
-		std::cout << " Sce_flg:" << (int)Op->Sce_flg << std::endl;
+		std::cout << "PlcMotion: " << std::endl;
+		std::wcout << L"\tFile: " << pSce->pWork->Filename().stem().wstring() << std::endl;
+		std::cout << "\tRoutine: " << (int)pSce->pWork->Routine_0 << "," << (int)pSce->pWork->Routine_1 << "," << (int)pSce->pWork->Routine_2 << "," << (int)pSce->pWork->Routine_3 << std::endl;
+		std::cout << "\tMove_no: " << (int)Op->Move_no << std::endl;
+		std::cout << "\tSce_flg: " << (int)Op->Sce_flg << std::endl;
+		std::cout << "\t\t";
+		for (int i = 0; i < 16; i++)
+		{
+			if (Op->Sce_flg & (1 << (15 - i)))
+			{
+				std::cout << "1";
+			}
+			else
+			{
+				std::cout << "0";
+			}
+		}
+		std::cout << std::endl << std::endl;
 
-		if (Routine0 == 1)
+		if (pSce->pWork->Routine_0 == 1)
 		{
 			pSce->pWork->SetAnimIndex(AnimationIndex::Weapon);
 		}
-		else if (Routine0 == 4)
+		else if (pSce->pWork->Routine_0 == 4)
 		{
 			pSce->pWork->SetAnimIndex(AnimationIndex::Room);
 			pSce->pWork->b_DrawWeapon = false;
@@ -2144,6 +2694,9 @@ namespace Resident_Evil_2_Instruction
 		pSce->pWork->Sce_free0 = 0;
 		pSce->pWork->Sce_free1 = 0;
 
+		//
+		//G->Player->State()->b_Sleep = true;
+
 		return EXEC_NORMAL;
 	}
 
@@ -2154,6 +2707,66 @@ namespace Resident_Evil_2_Instruction
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Plc_dest);
 
 		// TODO
+
+		std::cout << "Plc_dest: " << std::endl;
+		std::wcout << L"\tFile: " << pSce->pWork->Filename().stem().wstring() << std::endl;
+
+		if (((pSce->pWork->Sce_flg & 4) == 0) || (pSce->pWork->Routine_1 != Op->Routine_0))
+		{
+			uint32_t Routine = (static_cast<uint32_t>(Op->Routine_0) << 8) | 4u;
+			pSce->pWork->Routine_0 = static_cast<uint8_t>(Routine & 0xFF);
+			pSce->pWork->Routine_1 = static_cast<uint8_t>((Routine >> 8) & 0xFF);
+			pSce->pWork->Routine_2 = static_cast<uint8_t>((Routine >> 16) & 0xFF);
+			pSce->pWork->Routine_3 = static_cast<uint8_t>((Routine >> 24) & 0xFF);
+			std::cout << "\tRoutine " << (int)pSce->pWork->Routine_0 << "," << (int)pSce->pWork->Routine_1 << "," << (int)pSce->pWork->Routine_2 << "," << (int)pSce->pWork->Routine_3 << std::endl;
+		}
+
+		std::cout << "\tDest_x: " << Op->Dest_x << std::endl;
+		std::cout << "\tDest_z: " << Op->Dest_z << std::endl;
+		std::cout << "\tSet_flg_no: " << (int)Op->Set_flg_no << std::endl;
+		std::cout << "\t\t";
+		for (int i = 0; i < 16; i++)
+		{
+			if (Op->Set_flg_no & (1 << (15 - i)))
+			{
+				std::cout << "1";
+			}
+			else
+			{
+				std::cout << "0";
+			}
+		}
+		std::cout << std::endl << std::endl;
+
+		auto Id = pSce->pWork->FileID();
+		size_t idx = 0;
+
+		if (Id < 0x10)
+		{
+			idx = static_cast<size_t>(Id) + 0x10;
+		}
+		else
+		{
+			idx = static_cast<size_t>(Id) - 0x40;
+		}
+
+		/*switch (Op->Routine_0)
+		{
+		case 4:
+		case 0x12: pSce->pWork->Sce_free0 = static_cast<uint16_t>(Subpl_walk[idx][1]); break;
+		case 5: pSce->pWork->Sce_free0 = static_cast<uint16_t>(Subpl_run[idx][1]); break;
+		case 7: pSce->pWork->Sce_free0 = static_cast<uint16_t>(Subpl_back[idx][1]); break;
+		case 8: pSce->pWork->Sce_free0 = static_cast<uint16_t>(Subpl_ato[idx][1]); break;
+		case 9: pSce->pWork->Sce_free0 = static_cast<uint16_t>(Subpl_dir[idx][1]); break;
+		}*/
+
+		pSce->pWork->Sce_flg = 0;
+		pSce->pWork->Sce_free1 = 0;
+		pSce->pWork->Set_flg_no = Op->Set_flg_no;
+		pSce->pWork->Dest_x = Op->Dest_x;
+		pSce->pWork->Dest_z = Op->Dest_z;
+		pSce->pWork->Sce_free2 = pSce->pWork->Dest_x;
+		pSce->pWork->Sce_free3 = pSce->pWork->Dest_z;
 
 		return EXEC_NORMAL;
 	}
@@ -2177,9 +2790,27 @@ namespace Resident_Evil_2_Instruction
 
 		// TODO
 
-		G->m_PlayerState->Set(Idle);
+		pSce->pWork->Routine_0 = 1;
+		pSce->pWork->Routine_1 = 0;
+		pSce->pWork->Routine_2 = 0;
+		pSce->pWork->Routine_3 = 0;
 
-		G->Player->b_DrawWeapon = true;
+		//if (pSce->pWork->Id < 0x10)
+		{
+		//	pSce->pWork->Type = pSce->pWork->Type & 0xfff;
+		}
+
+		//pSce->pWork->Neck_flg = PLC_NECK_FRONT;
+
+		//pSce->pWork->Type = pSce->pWork->Type & 0xafff;
+
+		G->Player->State()->b_Sleep = false;
+
+		pSce->pWork->SetAnimIndex(AnimationIndex::Weapon);
+
+		G->Player->State()->Set(Idle);
+
+		pSce->pWork->b_DrawWeapon = true;
 
 		return EXEC_NORMAL;
 	}
@@ -2194,9 +2825,9 @@ namespace Resident_Evil_2_Instruction
 		{
 			switch (Op->Operator)
 			{
-			case 0: pSce->pWork->Sce_flg = static_cast<uint16_t>(pSce->pWork->Sce_flg | Op->Num); break;
+			case 0: pSce->pWork->Sce_flg |= Op->Num; break;
 			case 1: pSce->pWork->Sce_flg = Op->Num; break;
-			case 2: pSce->pWork->Sce_flg = static_cast<uint16_t>(pSce->pWork->Sce_flg ^ Op->Num); break;
+			case 2: pSce->pWork->Sce_flg ^= Op->Num; break;
 			}
 		}
 
@@ -2208,6 +2839,8 @@ namespace Resident_Evil_2_Instruction
 		auto const* Op = reinterpret_cast<Resident_Evil_2_Bytecode::Sce_em_set*>(pSce->Data);
 
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Sce_em_set);
+
+		// TODO
 
 		G->Enemy.push_back(std::make_shared<Resident_Evil_Model>());
 
@@ -2227,6 +2860,7 @@ namespace Resident_Evil_2_Instruction
 		//Enemy->Sound_flg = Op->Sound_flg;
 		//Enemy->Model_type = Op->Model_type;
 		//Enemy->Em_set_flg = Op->Em_set_flg;
+		//std::cout << "Id " << (int)Op->Id << " Model_type " << (int)Op->Model_type << std::endl;
 
 		Enemy->Position().x = Op->Pos_x;
 		Enemy->Position().y = Op->Pos_y;
@@ -2235,6 +2869,7 @@ namespace Resident_Evil_2_Instruction
 
 		//Enemy->Motion = Op->Motion;
 		//Enemy->Ctr_flg = Op->Ctr_flg;
+		//std::cout << "Id " << (int)Op->Id << " Motion " << (int)Op->Motion << std::endl;
 
 		return EXEC_NORMAL;
 	}
@@ -2258,7 +2893,7 @@ namespace Resident_Evil_2_Instruction
 
 		G->Sce->Sce_aot[Op->Aot].Is4P = false;
 		G->Sce->Sce_aot[Op->Aot].Id = Op->Id;
-		G->Sce->Sce_aot[Op->Aot].Type = Op->Type;
+		G->Sce->Sce_aot[Op->Aot].Type = static_cast<uint8_t>(Op->Type | (G->Sce->Sce_aot[Op->Aot].Type & 0x80));
 		G->Sce->Sce_aot[Op->Aot].Data0 = Op->Data0;
 		G->Sce->Sce_aot[Op->Aot].Data1 = Op->Data1;
 		G->Sce->Sce_aot[Op->Aot].Data2 = Op->Data2;
@@ -2270,9 +2905,20 @@ namespace Resident_Evil_2_Instruction
 	{
 		auto const* Op = reinterpret_cast<Resident_Evil_2_Bytecode::Aot_on*>(pSce->Data);
 
-		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Aot_on);
+		G->Sce->pCAot = &G->Sce->Sce_aot[Op->Aot];
 
-		// TODO
+		auto Id = G->Sce->pCAot->Id;
+
+		Sce_at_jump_tbl[G->Sce->pCAot->Id].func(*G->Sce->pCAot);
+
+		// hack: if this is a door, immediately return EXEC_YIELD and halt script execution
+		if (Id == SCE_DOOR)
+		{
+			pSce->Status = STATUS_READY;
+			return EXEC_YIELD;
+		}
+
+		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Aot_on);
 
 		return EXEC_NORMAL;
 	}
@@ -2417,15 +3063,17 @@ namespace Resident_Evil_2_Instruction
 	{
 		auto* Op = reinterpret_cast<Resident_Evil_2_Bytecode::Sce_key_ck*>(pSce->Data);
 
+		uint16_t Mask = static_cast<uint16_t>(pSce->Data[2]) | (static_cast<uint16_t>(pSce->Data[3]) << 8);
+
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Sce_key_ck);
 
-		uint32_t Flag = static_cast<uint32_t>(Op->Flag);
+		uint32_t Flag = Op->Flag;
 
-		uint32_t KeyState = std::to_underlying(G->m_PlayerState->KeyState());
+		uint32_t KeyState = std::to_underlying(G->Player->State()->KeyState());
 
-		if ((KeyState & Op->Key) == 0)
+		if ((KeyState & Mask) == 0)
 		{
-			Flag ^= 1;
+			Flag ^= 1u;
 		}
 
 		return Flag;
@@ -2435,14 +3083,20 @@ namespace Resident_Evil_2_Instruction
 	{
 		auto* Op = reinterpret_cast<Resident_Evil_2_Bytecode::Sce_trg_ck*>(pSce->Data);
 
+		uint16_t Mask = static_cast<uint16_t>(pSce->Data[2]) | (static_cast<uint16_t>(pSce->Data[3]) << 8);
+
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Sce_trg_ck);
 
-		if ((std::to_underlying(G->m_PlayerState->KeyState()) & Op->Key_trg) == 0)
+		uint32_t Flag = Op->Flag;
+
+		uint32_t KeyState = std::to_underlying(G->Player->State()->KeyStateTrigger());
+
+		if ((KeyState & Mask) == 0)
 		{
-			Op->Flag ^= 1;
+			Flag ^= 1u;
 		}
 
-		return static_cast<uint32_t>(Op->Flag);
+		return Flag;
 	}
 
 	static uint32_t Sce_bgm_control(Scenario::Task* pSce)
@@ -2551,6 +3205,8 @@ namespace Resident_Evil_2_Instruction
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Xa_on);
 
 		// TODO
+
+		//G->Sce->Status_flg |= 0x20;
 
 		return EXEC_NORMAL;
 	}
@@ -2860,7 +3516,7 @@ namespace Resident_Evil_2_Instruction
 
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::Sce_scr_move);
 
-		// TODO
+		// TODO: vertical camera scroll
 
 		return EXEC_NORMAL;
 	}
@@ -3184,15 +3840,15 @@ namespace Resident_Evil_2_Instruction
 
 		pSce->Data += sizeof(Resident_Evil_2_Bytecode::St_map_hint);
 
-		//St.St_type = 4;
+		//G->Sce->St->St_type = 4;
 
-		//Game.Doordemo_flg = 1;
+		//G->Sce->Game->Doordemo_flg = 1;
 
 		G->Sce->Status_flg |= STAT_STATUS_SCREEN;
 
-		//Game._68_4_ = G.Stop_flg;
+		//G->Sce->Game->Stop_bak = G->Sce->Stop_flg;
 
-		//St.Dmode[3][0].tag._2_1_ = Op->Tag;
+		//G->Sce->St->Dmode[3][0].tag._2_1_ = Op->Tag;
 
 		return EXEC_NORMAL;
 	}
@@ -3549,68 +4205,7 @@ void Resident_Evil_2_Bytecode::NullScheduler(void)
 }
 
 
-const bool Scenario::ProcessAOT(void)
+void Scenario::ProcessAOT(void)
 {
-	bool b_Inspect = false;
-
-	static constexpr std::array<const char*, 15> SceFuncStr =
-	{
-		"Nothing",
-		"Door",
-		"Item",
-		"Normal",
-		"Message",
-		"Event",
-		"Flag Change",
-		"Water",
-		"Move",
-		"Save",
-		"Item Box",
-		"Damage",  
-		"Status",
-		"Drawer",
-		"Computer"
-	};
-
-	if ((static_cast<uint32_t>(G->m_PlayerState->KeyState()) & static_cast<uint32_t>(Resident_Evil_Key::INSPECT)) != 0)
-	{
-		b_Inspect = true;
-	}
-
-	for (size_t i = 0; i < G->Sce->Sce_aot.size(); i++)
-	{
-		auto& Aot = G->Sce->Sce_aot[i];
-
-		if (Aot.Id == SCE_NOTHING)
-		{
-			G->Sce->AotStr = SceFuncStr[Aot.Id];
-
-			Sce_at_jump_tbl[Aot.Id].func(Aot);
-
-			continue;
-		}
-
-		const bool b_Manual = ((Aot.Type & SCE_MANUAL) != 0);
-
-		if (b_Manual && !b_Inspect) { continue; }
-
-		if (Aot.Is4P)
-		{
-			if (!G->Geometry->Collision4P(G->Player->Position(), Aot.Xz)) { continue; }
-		}
-		else
-		{
-			if (!G->Geometry->CollisionBox(G->Player->Position(), G->Player->Hitbox(), Aot.X, Aot.Z, Aot.W, Aot.D)) { continue; }
-		}
-
-		G->m_PlayerState->ResetKeyState();
-
-		G->Sce->AotStr = SceFuncStr[Aot.Id];
-
-		Sce_at_jump_tbl[Aot.Id].func(Aot);
-
-		return true;
-	}
-
-	return false;
+	Resident_Evil_2_Instruction::Sce_at();
 }

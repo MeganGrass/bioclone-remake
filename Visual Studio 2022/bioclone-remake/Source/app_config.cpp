@@ -318,6 +318,11 @@ void Global_Application::OpenConfig(void)
 				m_BootWeaponFilename = Args[1];
 			}
 
+			if (Standard_String().ToUpper(Args[0]) == L"M_DATAPATH")
+			{
+				m_DataPath = Args[1];
+			}
+
 			if (Standard_String().ToUpper(Args[0]) == L"M_PLAYERPATH")
 			{
 				m_PlayerPath = Args[1];
@@ -520,6 +525,7 @@ void Global_Application::SaveConfig(void)
 	Text->AddLine(L"m_ModelFilename\t\"%ws\"\r", Player->Filename().wstring().c_str());
 	Text->AddLine(L"m_ModelWeaponFilename\t\"%ws\"\r", Player->WeaponFilename().wstring().c_str());
 
+	Text->AddLine(L"m_DataPath\t\"%ws\"\r", m_DataPath.wstring().c_str());
 	Text->AddLine(L"m_PlayerPath\t\"%ws\"\r", m_PlayerPath.wstring().c_str());
 	Text->AddLine(L"m_EnemyPath\t\"%ws\"\r", m_EnemyPath.wstring().c_str());
 	Text->AddLine(L"m_DoorPath\t\"%ws\"\r", m_DoorPath.wstring().c_str());
